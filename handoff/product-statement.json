@@ -1,0 +1,254 @@
+{
+ "$schema": "./handoff.schema.json",
+ "schemaVersion": "1.5.0",
+ "productId": "citymeter-governmentoffice",
+ "productVersion": "0.1.0",
+ "updatedOn": "2026-11-06",
+ "documentType": "product-statement",
+ "dataset_id": "research.TH.government_office",
+ "productionDatasetCode": "governmentOfficer",
+ "language": "th",
+ "liveUrl": "https://montri-th.github.io/governmentoffice/",
+ "markdown": "PRODUCT_STATEMENT.md",
+ "positioning": {
+  "one_line_highlight": "แผนที่เมือง 3 มิติของหน่วยงานรัฐทั่วไทย ที่บอกว่าหน่วยงานกระจุกตรงไหน รอบแปลงมีบริการรัฐอะไรใกล้ที่สุด และสำนักงานใดเพิ่งย้าย พร้อมแหล่งของทุกตัวเลข",
+  "question": "หน่วยงานรัฐกระจุกอยู่ตรงไหน และรอบแปลงมีบริการรัฐอะไรใกล้ที่สุด",
+  "unique_advantage": "นับหน่วยงานไม่ซ้ำ บุคลากรเท่าที่ production บันทึกรายแห่ง ยอดรายเขต × หมวดตรงกับ production ทุกช่อง บริการรัฐที่ใกล้ที่สุด 5 อย่าง และเหตุการณ์ย้ายพร้อมประกาศในหน้าเดียว",
+  "unique_vs_competitors": "Google Maps ตอบทีละสถานที่ รายชื่อสถานที่ราชการไม่มีแผนที่หรือยอดต่ออำเภอ และฐานข้อมูลไม่ตามการย้าย — Government Office รวมทุกหมวดของ production นับต่อเขต/อำเภอ บอกบริการรอบจุด และตามการย้ายพร้อมประกาศ"
+ },
+ "users": {
+  "primary_users": [
+   "ทีมพัฒนาโครงการและนักลงทุนที่ดิน",
+   "ทีมเลือกทำเลค้าปลีกและบริการ",
+   "จังหวัด อปท. และหน่วยงานที่วางแผนจุดบริการ",
+   "ผู้ประเมินมูลค่าและสถาบันการเงิน"
+  ],
+  "functional_needs": [
+   "หน่วยงานต่อเขต/อำเภอแยกหมวดและประเภท",
+   "บริการรัฐที่ใกล้ที่สุดรอบแปลง (ระยะตรง)",
+   "สำนักงานที่ย้ายหรือเปิดใหม่พร้อมวันที่และประกาศ",
+   "ระยะถึงรถไฟฟ้า",
+   "บุคลากรที่บันทึกต่อพื้นที่"
+  ],
+  "emotional_needs": [
+   "มั่นใจว่าไม่พลาดข้อเท็จจริงพื้นฐานของทำเล",
+   "อธิบายต่อผู้บริหารได้ด้วยหลักฐาน"
+  ],
+  "trigger_voice_in_head": [
+   "แปลงนี้ใกล้ศูนย์ราชการไหม อำเภอย้ายไปไหนแล้ว",
+   "คนมาติดต่อราชการเยอะแถวไหน",
+   "ตำบลนี้ไกลสถานีดับเพลิงแค่ไหน",
+   "ขอบริการรัฐรอบทำเลก่อนลงพื้นที่"
+  ],
+  "value_proposition": "ตอบ “อำเภอไหนมีหน่วยงานรัฐมาก รอบแปลงมีบริการรัฐอะไรห่างเท่าไร และสำนักงานใดเพิ่งย้าย” ในหนึ่งหน้าจอภายในหนึ่งนาที และเปิดย้อนถึงแหล่งได้ทุกตัวเลข",
+  "evidence": "Hypothesis — not yet validated with external users (hypotheses_to_validate)"
+ },
+ "problem": {
+  "statement": "ข้อมูลหน่วยงานรัฐกระจัดกระจายในรายชื่อของกรมการปกครอง หน้าเว็บของแต่ละหน่วยงาน และการค้นทีละแห่ง ไม่มีภาพที่บอกว่าหน่วยงานกระจุกที่อำเภอใด รอบแปลงมีบริการรัฐอะไร และเมื่อสำนักงานย้าย ข้อมูลเดิมยังชี้ที่ตั้งเก่า",
+  "urgency": "ศูนย์ราชการและอาคารใหม่กำลังย้ายตำแหน่งของคนที่มาติดต่อราชการ — 97 เหตุการณ์ใน 3 ปีที่ production ยังไม่มีที่ตั้งใหม่ (Observed fact)",
+  "severity": "การตัดสินใจทำเลที่อ้างตำแหน่งเก่าหรือบริการที่ไม่มีอยู่จริงมีต้นทุนสูงกว่าการตรวจซ้ำ (Inference)"
+ },
+ "competitor_landscape": {
+  "present_competitors": [
+   {
+    "name": "Google Maps",
+    "how_users_use_it": "ค้นทีละสถานที่ ดูเส้นทาง",
+    "strength": "ครอบคลุม อัปเดตจากผู้ใช้",
+    "gap": "ไม่รวมต่อพื้นที่ ไม่แยกหมวดตามรัฐ ไม่บอกบุคลากรหรือการย้ายพร้อมประกาศ"
+   },
+   {
+    "name": "รายชื่อสถานที่ราชการของกรมการปกครอง (ข้อมูลเปิด)",
+    "how_users_use_it": "ดาวน์โหลดตารางรายจังหวัด",
+    "strength": "เป็นทางการ",
+    "gap": "ไม่มีแผนที่ ไม่รวมยอดต่ออำเภอ ไม่เชื่อมบริการรอบจุดหรือขนส่ง"
+   },
+   {
+    "name": "CityMETER production (?d=governmentOfficer)",
+    "how_users_use_it": "ดูชั้นข้อมูลหน่วยงานรัฐในระบบจริง",
+    "strength": "ข้อมูลต้นทาง ขอบเขตเดียวกัน",
+    "gap": "เดโมนี้เพิ่มข้อค้นพบแรก บริการที่ใกล้ที่สุด เหตุการณ์ย้าย และการนับไม่ซ้ำ"
+   },
+   {
+    "name": "รายงานที่ปรึกษาทำเล",
+    "how_users_use_it": "สั่งทำรายแปลง",
+    "strength": "ตีความให้",
+    "gap": "ช้า แพง ไม่ลงทุกอำเภอ ไม่เปิดแหล่งของทุกตัวเลข"
+   }
+  ],
+  "aspirational_competitors": [
+   "CityMETER · Hotel",
+   "CityMETER · School"
+  ],
+  "expected_quality_bar": "หนึ่งหน้าจอ หนึ่งนาที ทุกตัวเลขมีแหล่ง ไม่ทราบไม่เป็น 0 ระยะทุกตัวเป็นระยะตรง"
+ },
+ "winning_strategy": [
+  "นับให้ถูกก่อน: หนึ่งหน่วยงานหนึ่งแถว บุคลากรเฉพาะที่บันทึกรายแห่ง ไม่นับ อปท. ซ้ำ ยอดตรงกับ production",
+  "คำตอบของทำเลในหนึ่งแผง: บริการรัฐที่ใกล้ที่สุด หน่วยงานรอบ 2 กม. สถานี ภูมิประเทศ และอาคาร 3 มิติ",
+  "ตามการย้าย: เหตุการณ์ย้ายและเปิดใหม่พร้อมประกาศในข้อค้นพบ พื้นที่ และหน่วยงาน",
+  "ทะเบียนเดียวกัน: ขอบเขต รหัส และลิงก์ ?d=governmentOfficer เดียวกับ production สถานีจาก CityMETER · Transit อาคารจาก CityMETER · Hotel",
+  "ชุดเดียวกันทั้งหมด: การศึกษา ศาสนา และชุมชนของชุดข้อมูลเดียวกันโหลดเมื่อเลือก"
+ ],
+ "firstFinding": {
+  "evidence": "Observed fact",
+  "offices": {
+   "measure": "count",
+   "home": "NMA",
+   "areas": [
+    [
+     "3001",
+     "เมืองนครราชสีมา",
+     69
+    ],
+    [
+     "3014",
+     "ปักธงชัย",
+     47
+    ],
+    [
+     "3020",
+     "สีคิ้ว",
+     42
+    ]
+   ],
+   "value": 158,
+   "homeValue": 715,
+   "share": "22%",
+   "rail": "hidden (no operating station in the province)",
+   "outside": [
+    "6001",
+    "เมืองนครสวรรค์",
+    "NSN",
+    84
+   ],
+   "staff": {
+    "home": "CBI",
+    "areas": [
+     [
+      "2001",
+      "เมืองชลบุรี",
+      5897
+     ],
+     [
+      "2007",
+      "ศรีราชา",
+      4665
+     ],
+     [
+      "2009",
+      "สัตหีบ",
+      3752
+     ]
+    ],
+    "value": 14314,
+    "homeValue": 21533,
+    "outside": [
+     "1601",
+     "เมืองลพบุรี",
+     "LRI",
+     9101
+    ]
+   },
+   "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+  },
+  "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+ },
+ "data_transparency": {
+  "unit": {
+   "row": "one office: a point of the production Government Officer dataset, or the repeated points of one office (same type and name, same province, chained within 100 m) — the point with the smallest UUID",
+   "count": "แห่ง — points of the selection",
+   "staff": "คน — personnel production records at the office (types with a site count only)"
+  },
+  "sources": [
+   "CityMETER Government Agencies & Workforce",
+   "theshifters/landometer production + local legacy checkout",
+   "สถานที่ราชการและสถานที่สำคัญ 76 จังหวัด",
+   "ที่ตั้งกระทรวง ทบวง กรม และหน่วยราชการใน กทม.",
+   "รายชื่อส่วนราชการระดับกรมหรือเทียบเท่า PAS",
+   "หน่วยงานของรัฐส่วนกลางระดับกรมหรือเทียบเท่า และต่ำกว่ากรม",
+   "ศูนย์รวมข้อมูลเพื่อติดต่อราชการ",
+   "สรุปข้อมูล อปท. ทั่วประเทศ",
+   "เครือข่าย e-WorkPermit / Outsourcing Service"
+  ],
+  "checkedOn": "2026-11-06",
+  "readOn": "2026-11-06",
+  "builtOn": "2026-11-06",
+  "method": "DATA_METHOD.md",
+  "tabs": {
+   "00_README": {
+    "rows": 17,
+    "sha256": "317316c87b4648cef9ee25aa0606580dffb8d4d6d38105e10915553824b87562"
+   },
+   "01_AGENCIES": {
+    "rows": 459,
+    "sha256": "6dcc21246b3de5fdbacb94677e520045ea887b73798b74dc995a62ca7551df0f"
+   },
+   "02_OFFICE_CANDIDATES": {
+    "rows": 17044,
+    "sha256": "2c47757a54cb9d2995cd9e8687f2e4b66b8cde251406f0eb13369f63bfa8e0ff"
+   },
+   "03_RECENT_EVENTS": {
+    "rows": 7,
+    "sha256": "a9fc1646aa6aba27cb4ccead1cda5a9d9ef973fba02c0861d75b8d3d13eabf02"
+   },
+   "04_SOURCES": {
+    "rows": 9,
+    "sha256": "d3fc1813f5a67fbea568b306d6b1364ae036bf162dd57997f946d433fda2abb6"
+   },
+   "05_PRODUCTION_ROWS": {
+    "rows": 440005,
+    "sha256": "b4217cb953e25be7de585989991ee579b6ca1e7f361655a4987a627dc22543b0"
+   },
+   "06_RECENT_PROD_GAPS": {
+    "rows": 97,
+    "sha256": "0e6d8cdd25f7bbae6fa5441a76337db4295b11b72614e61c74cbc6a13145f56a"
+   }
+  }
+ },
+ "known_limitations": [
+  "Rows are production points of the Government Officer dataset as the research sheet holds them; whether an office is open at its point today is not field-verified.",
+  "Personnel is production’s officer value for the types that record a count at the site; police stations, district offices and types whose value is a default are unknown (counted apart, never 0).",
+  "Production types no district office, local government or court in Bangkok; the nearest services there name police and fire only.",
+  "79 of the 97 recent events name no production row; their new places are not points of this dataset.",
+  "899 points have no category yet, mostly agencies’ head offices in Bangkok; their personnel is the agency’s whole workforce.",
+  "Distances are straight lines between reference points.",
+  "Building heights are model estimates (CityMETER Building V4) or tags/defaults (OpenStreetMap)."
+ ],
+ "claimBoundary": {
+  "canSay": [
+   "where government offices of production are, by district and type",
+   "how many personnel production records at the offices that record it",
+   "which offices of five kinds are nearest a point (straight line)",
+   "which offices announced a move or an opening, when, and where to read it"
+  ],
+  "cannotSay": [
+   "that an office is open at its point today",
+   "opening hours, visitors or service quality",
+   "civil servants or daytime population of an area",
+   "jurisdictions or service areas",
+   "walking time",
+   "that a move is complete"
+  ]
+ },
+ "hypotheses_to_validate": [
+  {
+   "hypothesis": "ทีมพัฒนาโครงการใช้ “บริการรัฐที่ใกล้ที่สุด” ในการคัดทำเล",
+   "test": "ให้ 5 ทีมเทียบ 3 แปลงโดยใช้และไม่ใช้เดโม",
+   "criterion": "การจัดอันดับเปลี่ยนหรือมั่นใจขึ้นใน ≥ 3 ใน 5 ทีม"
+  },
+  {
+   "hypothesis": "ทีมค้าปลีกใช้ “หน่วยงาน” มากกว่า “บุคลากร” ในการเลือกทำเล",
+   "test": "สัมภาษณ์ 5 คนด้วยคำถามทำเลจริง",
+   "criterion": "≥ 70% เลือกหน่วยงานเป็นมาตรวัดแรก"
+  },
+  {
+   "hypothesis": "เหตุการณ์ย้ายที่ตั้งเปลี่ยนการตัดสินใจทำเล",
+   "test": "แสดงเหตุการณ์ 10 รายการแก่ผู้ใช้ 5 คน",
+   "criterion": "≥ 3 คนบอกว่าจะตรวจทำเลซ้ำ"
+  },
+  {
+   "hypothesis": "จังหวัด/อปท. ใช้ระยะถึงดับเพลิงและตำรวจในการวางจุดบริการ",
+   "test": "ทดสอบกับ 2 หน่วยงาน",
+   "criterion": "ใช้ในเอกสารวางแผนอย่างน้อย 1 ฉบับ"
+  }
+ ]
+}

@@ -1,0 +1,76 @@
+{
+ "artifact": "CityMETER Government Office — 3D-first, district-first map of government offices and the personnel production records across Thailand, with production's groups and types, the nearest public services round a site, recent moves and openings, rail context from the same registry, and the other places of the same production dataset on demand",
+ "productVersion": "0.1.0",
+ "updatedOn": "2026-11-06",
+ "ldsVersion": "0.9.7",
+ "release": "v0.9.7-owner.1",
+ "revision": "standalone-0.9.7-r1",
+ "colorSetId": "color-srgb-10",
+ "baseDocumentSha256": "d3085cbc0a50195f1cbf0c77b1d77c0d19b84364daf2948eb367348d65432d96",
+ "locationIntelligenceProfile": "applied for personnel: li.supply (location-intelligence-profile-lds-0.9.7-r1, sha256 5d4856041709735d3a04d4a510a88b551df86c211fdcab8a0707e8fe7c9efc3b; baseDocument d3085cbc…96) — personnel recorded at an office is a served quantity (กำลังให้บริการที่มีอยู่), evidence state unverified (production records, not a staff census); offices use the base count family",
+ "layoutReference": "https://landometer.com/v3/citymeter",
+ "fontRoles": {
+  "body": "Bai Jamjuree 400/600",
+  "thaiHeadings": "IBM Plex Sans Thai Looped 700",
+  "latinHeadings": "Arvo 700",
+  "dataAndMetrics": "JetBrains Mono 400; tabular numerals",
+  "navigation": "Material Symbols Rounded approved nav-7 subset; FILL 0 / wght 300 / GRAD 0 / opsz 24",
+  "pictograms": "Material Symbols Rounded 25-glyph pictogram subset built from the same source font (3764 B, sha256 68abef67…): area, province, segment, ai, streetview, maps, building, office (account_balance), staff (badge), type (category), moved (move_location), opened (domain_add), service (support_agent), school (the CityMETER School link), rail (train), compare (compare_arrows), terrain facts sea, elevation, relief, forest, and rank, date, distance, construction, dataset; owner test exception 2026-10-22 (Hotel), office glyphs 2026-11-06; no star glyph"
+ },
+ "colors": {
+  "applied": "assets/theme.css — foundation pairs, semantic states, map roles, dataState (noData, zero), categorical series 1–10 (landometer-series-10-v8 soft fill + ink), count classes, basemap-only tokens",
+  "analytical": "js/scales.js — count for offices (4ff5c1fb4be71ecd13c48685b38371b528bcd4ce369ce964a75354c2eb4d0980) and li.supply for recorded personnel (scaleVersion 671112f34b878219faf90fb3fd07cc05a919c134d798ff40fbc8ab278273c497); exact 41-sample LUTs; identical HEX on both themes; all 41 samples by rank among the measured nonzero values (buildRamp; owner standing rule “Color scale ขอให้ใช้ 41 scales ตาม LDS เสมอ”), legend with every sample and value ticks; numbers on low-contrast samples on a plate; a district whose offices all have unknown personnel is no_data (hatch) under personnel",
+  "categorical": "js/cues.js — group id → series (admin 1 circle, police 2 square, fire 3 triangle, justice 4 diamond, military 5 cross, unclassified 9 dash; education 7 hexagon, religion 8 ring, community 10 plus); no star",
+  "status": "no status pills: every row is a production point (not field-verified), said once in the provenance clause; a move or an opening is a dated box with the agency's announcement",
+  "reportedDifference": "LDS analytical scale records list dark noData #3B4849 / zeroOutline #BAC6C0, while machine.tokens.dataState lists dark #404844 / #93A398; the map follows the EVID-05 treatment (dataState), as in Restaurants and Pharmacy, and the difference stays reported to the owner",
+  "parity": "scripts/check-lds-parity.mjs against the LDS base file and the Location Intelligence Profile: 124 checks (handoff/VERIFICATION.md)",
+  "notDistributed": "full LDS library, the Location Intelligence Profile, other analytical families",
+  "context": "stations (CityMETER Transit) as quiet rings: card fill + text-secondary stroke, selected = map.selectedStroke with a dashed 500 m radius; size cue of pins by recorded personnel; foundation fill for ordinal bars (stations, types)"
+ },
+ "firstAha": "share of the leading province’s offices placed at district level that sit in up to three districts with the most offices (never cutting a tie, never every district holding offices), the share within 500 m of an operating rail station there against the rest of the province (rows with a point; both bases; hidden when nothing is near rail), and the district(s) with the most offices outside it; the same with recorded personnel under the staff measure; the subject follows the scope (หน่วยงานรัฐ · a group · a type · บุคลากรที่บันทึก); computed per selection; the map opens in the 3D city preset with those districts focused automatically and the rest quiet",
+ "countingUnit": "measure switch: offices (แห่ง, default) or personnel recorded (คน; offices with unknown personnel counted apart, never 0; a local government counted once; an agency's whole workforce on its head office only); off for a scope without recorded personnel",
+ "focusAndQuiet": {
+  "implementation": "app.js focus modes (auto/explicit/none) and row scopes; map-layers.js filled/quiet/province feature-state; pins.js cue symbols vs grey context dots; massing.js quiet city tier vs rounded focus tier, see-through front buildings in the building view (setScene eye); venue-xray.js draws the building being looked at over everything else; stations.js quiet station rings and the selected station radius; camera.js presets and the building view (fitBuilding, twoPointBearing); provinces.js frames below zoom 8 without a จังหวัด filter"
+ },
+ "geometryAndMetricContract": "one row per symbol (one office: a production point or its repeated points within 100 m), only rows with a point; membership = the production district of the point's overlay subdistrict (row.admin = overlay); totals only (offices or personnel recorded); outlines per province on demand; other groups' rows per group file on demand",
+ "accessibility": [
+  "native form labels and disclosure",
+  "visible focus on every control including pins, area labels and chart marks",
+  "keyboard pin tour (arrow keys) at detail zoom, excluding quiet context dots",
+  "roving tablist for the chart views",
+  "reduced motion respected",
+  "table equivalent for every map view",
+  "categorical shape cues beside colour; text labels in every legend and list",
+  "empty, map-failure, frame-failure and load-error paths with actions",
+  "Thai labels for the map’s own controls (MapLibre locale)",
+  "measure switch as a radio group (arrow keys), its state announced"
+ ],
+ "validation": {
+  "status": "release verification recorded in handoff/VERIFICATION.md",
+  "renderedHarness": "Playwright + MapLibre 5.6.2 from the npm package; OpenFreeMap and unpkg blocked in the build container (stub TileJSON with empty tiles: no basemap, no OSM buildings there); 1440×900 and 390×844, light and dark; live walk on GitHub Pages for the real basemap",
+  "scope": "Applied LDS values, fonts and actual rendered interfaces. No blanket LDS, CVD, native-device or market-completeness claim."
+ },
+ "layoutContract": {
+  "headerPx": 48,
+  "readingPanelWidth": "min(max(300px, 28%), 440px)",
+  "map": "full remaining viewport below header",
+  "chartTray": "collapsible bottom overlay",
+  "mobilePortrait": "full map, five toolbar buttons in one row (วิธีใช้ and Product statement at the top of the sheet); one compact dock at the foot of the map — the Aha finding in two lines with its action, over one legend row (measure switch | level + zero swatch over the 41-sample ramp) — above the attribution while it is open, dropped to the tray once it folds to its (i) button; zoom buttons off on touch phones (pinch; the compass stays); bottom sheet 56% of the screen with a sticky close, opening on the office, building, station or area (Hotel 0.3.5)"
+ },
+ "mapContract": {
+  "basemap": "generated at runtime by js/map-style.js on https://tiles.openfreemap.org/planet with --basemap-* tokens",
+  "choropleth": "count (offices) or li.supply (personnel recorded), all 41 samples by rank over the measured nonzero values; beneath the basemap’s first line layer; zoom 8–14.5 (8–12.5 in terrain mode, hard switch), the selected จังหวัด from zoom 4; EVID-05 measured / measured_zero (sample 0 + 2 px zero outline) / no_data (personnel unknown: hatch)",
+  "provinces": "the same measure per province frame below zoom 8 without a จังหวัด filter, outlines to zoom 12, ink-chip labels to zoom 9, panel list",
+  "symbols": "focus rows with a point as cue icons whose area grows with the recorded personnel (hollow = an office with unknown personnel); context rows as grey circles, ≤ 6 px radius; HTML pins from zoom 15.5; the pin label is the short office name · personnel; stations of CityMETER Transit as quiet clickable rings",
+  "buildings": "per อปท. (Bangkok: เขต) evaluated by the CityMETER · Hotel build: CityMETER Building V4 where it holds ≥ 1.15 × the OSM buildings of the unit, else OSM; every other unit OSM (data/building-units/, scripts/adapt-building-units.py); OSM buildings mapped in parts kept; the attribution names CityMETER Building V4 while drawn",
+  "buildingView": "eye preset corner-on to the building on the least-occluded diagonal, zoom to fit the free part of the map on every way in (js/camera.js#fitBuilding); a station frames its 500 m radius; every office with a point opens it — the building its pin falls in, else the drawn building nearest the pin within 300 m (800 m after one widen) with the pin in the frame (legend “อาคารใกล้หมุด”); choosing a office or a building switches the map to 3D; a shift lens keeps pitch 75 on a phone above the sheet (Hotel 0.3.2)",
+  "breadcrumb": "ประเทศไทย › จังหวัด › เขต/อำเภอ with production codes and /D/ deep links, ?d=office",
+  "symbolSize": "area ∝ recorded personnel (js/model.js#pinRadius, √(personnel/100), cap 1,000), hollow = an office with unknown personnel at the 40-person size (a place of the other groups filled at that size), quiet context ≤ 6 px radius (Hotel owner rule 2026-11-01)",
+  "labels": "from zoom 12.5: ≤ 9 (phone 5) labels in the central ellipse ranked by the type's tier, then the personnel percentile; text only — group cue, one short name in the form Thai readers use (อบต. · ทต. · ทม. · ทน. · สภ. · สน. · อำเภอ …), personnel pictogram + count; measured placement off the chrome and the district chips (js/labels.js)",
+  "terrain": "terrain mode at hilly sites (zoom ≥ 12.5, 3D, relief ≥ 30 m in view) and round a building or office being looked at: 3D ground × 1.5 + hillshade in basemap tones; the district fill switches off at 12.5 (hard switch, never a fade); buildings, the x-ray and the building camera stand on the drawn ground (js/terrain.js, js/camera.js)",
+  "iconFirstText": "district chips carry the measure pictogram, the status is a pin + number, legend items are a symbol + 1–2 words; sentences live in titles and accessible names (owner 2026-11-01)",
+  "water": "light water --basemap-water #CFDDE7 (basemap-only, 1.22:1 from the ground) with the water-shore line --basemap-shore #B2C7D6 above the district fill; dark keeps surface.blueTint #18333E (0.3.4, owner “ใน light theme ทำให้ทะเล/water body ดูเหมือนน้ำมากกว่านี้ … แต่ยัง clean and quiet”); the coast line, district outlines and legend separate the sea from low li.supply classes, never the water hue alone"
+ },
+ "outboundActions": "js/ask.js — Google Search answered by Google’s AI Overview, AI Mode one tab away (office: opening hours, contact and services, moves and new service points, getting there · district: district office, local government, police, fire and courts, recent moves · station: offices near it · type: how many and where · overview: recent moves and new buildings), Maps and Street View per view, pictograms ai/streetview/maps",
+ "copy": "short natural Thai: หน่วยงาน / แห่ง / บุคลากร / หมวด / ประเภท / ต้นสังกัด / ที่ว่าการอำเภอ / ท้องถิ่น / ตำรวจ / ดับเพลิง / ศาล / ย้ายที่ตั้ง / สถานี / เขต·อำเภอ / ระยะตรง / รอบ ๆ; units on every number; one provenance line per panel view"
+}

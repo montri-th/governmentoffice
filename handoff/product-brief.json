@@ -1,0 +1,675 @@
+{
+ "$schema": "./handoff.schema.json",
+ "schemaVersion": "1.5.0",
+ "productId": "citymeter-governmentoffice",
+ "productVersion": "0.1.0",
+ "updatedOn": "2026-11-06",
+ "documentType": "product-brief",
+ "datasetCheckedOn": "2026-11-06",
+ "language": "th",
+ "productName": "CityMETER · Government Office",
+ "repository": "https://github.com/montri-th/governmentoffice",
+ "liveUrl": "https://montri-th.github.io/governmentoffice/",
+ "productStatement": "PRODUCT_STATEMENT.md",
+ "job": "หน่วยงานรัฐกระจุกอยู่ตรงไหน และรอบแปลงมีบริการรัฐอะไรใกล้ที่สุด — แล้วเจาะลงถึงสถานี หน่วยงาน อาคาร และการย้ายที่ตั้ง",
+ "audiences": [
+  "ทีมพัฒนาโครงการและนักลงทุนที่ดิน",
+  "ทีมเลือกทำเลค้าปลีกและบริการ",
+  "จังหวัด อปท. และหน่วยงานที่วางแผนจุดบริการ",
+  "ผู้ประเมินมูลค่าและสถาบันการเงิน"
+ ],
+ "journey": [
+  "first Aha (3D city scene, offices)",
+  "switch the measure (หน่วยงาน | บุคลากร)",
+  "district → groups, types, moves and openings, stations, offices",
+  "station → offices within 500 m and the nearest services",
+  "office → building view, type, personnel, agency, its move, nearest services, offices round it",
+  "group or type filter → its card; other places of the dataset on demand",
+  "charts and table",
+  "open the same area in CityMETER production"
+ ],
+ "basedOn": "CityMETER · Hotel 0.3.6 (montri-th/hotel @177e592f2437d391b0aef953c7c877234cfd9ece) through CityMETER · School 0.1.0: every engine contract carried unchanged; hotel- and school-only features (chain logos, prices, tuition, assessment, comparison sets) not carried",
+ "rowScopes": {
+  "scopeRows": "rows after search · group · type · province, before any district selection or focus: the comparison base of the Aha, the choropleth, the charts and every rank",
+  "baseRows": "scopeRows narrowed by the selected เขต/อำเภอ",
+  "rows": "baseRows narrowed by the district focus: pins with detail, counters, the table"
+ },
+ "firstAha": {
+  "scope": "scopeRows",
+  "measure": "count (default) | staff",
+  "ranking": "เขต/อำเภอ by the measure (then the other measure, then name) inside the home province = the province holding the most of the measure among rows placed at district level; up to three and never every district holding the measure (N ≤ 3 → top N − 1); never cut through a tie; none left → spread",
+  "headlineTemplate": "{share}% ของ{subject}ใน{home} อยู่ใน {n} {เขต|อำเภอ}นี้ (one district: อยู่ใน{เขต|อำเภอ}{name}); subject = js/model.js#unitFor: หน่วยงานรัฐ · a group (หน่วยงานตำรวจ …, ศาสนสถานและโบราณสถาน …) · a type (สถานีตำรวจ …) · บุคลากรที่บันทึก · สถานที่ทุกหมวด",
+  "numerator": "Σ measure of the focused districts (production membership)",
+  "denominator": "Σ measure of every row of the home province in the selection (homeValue)",
+  "personality": "rail: two bars — share of the measure within 500 m (straight line) of an operating CityMETER · Transit station among the focus rows with a point vs the rest of the province; both bases in each bar’s title and accessible text; hidden when nothing in the province is near rail",
+  "secondary": "the district(s) with the most of the measure outside the home province, every district tied at that value, “มากกว่าทุก{เขต|อำเภอ}ของ{home}” when it holds more than the focus’ first district",
+  "action": "โฟกัส / ดูทุกพื้นที่ (auto focus by default; ?areas=all releases it) · เปรียบเทียบพื้นที่ (charts)",
+  "model": "js/area-insight.js#summarizeAreaInsight",
+  "filter": "every filter of scopeRows; the measure switch; the group scope (other places loaded on demand)",
+  "defaultSnapshot": {
+   "measure": "count",
+   "home": "NMA",
+   "areas": [
+    [
+     "3001",
+     "เมืองนครราชสีมา",
+     69
+    ],
+    [
+     "3014",
+     "ปักธงชัย",
+     47
+    ],
+    [
+     "3020",
+     "สีคิ้ว",
+     42
+    ]
+   ],
+   "value": 158,
+   "homeValue": 715,
+   "share": "22%",
+   "rail": "hidden (no operating station in the province)",
+   "outside": [
+    "6001",
+    "เมืองนครสวรรค์",
+    "NSN",
+    84
+   ],
+   "staff": {
+    "home": "CBI",
+    "areas": [
+     [
+      "2001",
+      "เมืองชลบุรี",
+      5897
+     ],
+     [
+      "2007",
+      "ศรีราชา",
+      4665
+     ],
+     [
+      "2009",
+      "สัตหีบ",
+      3752
+     ]
+    ],
+    "value": 14314,
+    "homeValue": 21533,
+    "outside": [
+     "1601",
+     "เมืองลพบุรี",
+     "LRI",
+     9101
+    ]
+   },
+   "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+  },
+  "fallbacks": {
+   "empty": "ไม่พบ{หน่วยงาน|สถานที่}ตามตัวกรองนี้ + ล้างตัวกรอง",
+   "spread": "{n} {เขต|อำเภอ}ใน{home} มี{subject}เท่ากัน …",
+   "unplaced": "n แห่ง · ไม่ระบุเขต/อำเภอ (none in this release)"
+  },
+  "camera": "city preset framing the focus districts; plan when they are spread (> 0.3°)"
+ },
+ "countingUnitContract": {
+  "default": "offices (แห่ง): one office = a production point or the repeated points of one office (same type and name, same province, chained within 100 m)",
+  "alternatives": [
+   "personnel recorded (คน): Σ officer of the types that record a count at the site"
+  ],
+  "words": {
+   "count": "แห่ง",
+   "staff": "คน"
+  },
+  "rule": "unknown personnel counted apart, never 0; a local government counted once per organisation (staffShared); an agency’s whole workforce shown on its head office only (agencyStaff); places of the other groups have no personnel (switch off)",
+  "switch": "legend radio group, URL ?metric=staff"
+ },
+ "metricContract": {
+  "areas": "Σ measure per เขต/อำเภอ (offices → LDS count; personnel → LI li.supply)",
+  "provinces": "Σ measure per province frame (same family)",
+  "eligibility": "none — totals; ties are never cut (firstAha.ranking)",
+  "combined": "Σ focus ÷ the home province’s whole total in the selection (homeValue; a share, numerator and denominator shown)",
+  "notDrawn": "no per-area or per-person ratio: personnel recorded is not a density, a daytime population or a service capacity",
+  "ramp": "all 41 samples of the family LUT by rank among the measured nonzero values being read (js/scales.js#buildRamp; owner standing rule “Color scale ขอให้ใช้ 41 scales ตาม LDS เสมอ”); map, legend, labels, rank bars and the district chart read one ramp; the matrix has its own ramp over its cells"
+ },
+ "coverageContract": {
+  "covered": "every เขต/อำเภอ of the 77 provinces is in production’s national scope; 925 of 928 hold a government office",
+  "states": {
+   "measured": "ramp sample by rank",
+   "measured_zero": "sample 0 + zero outline — no office of the scope is placed there under the filters",
+   "no_data": "personnel only: the district has offices but none with recorded personnel (hatch)",
+   "out_of_scope": "not drawn"
+  },
+  "unplaced": "none: every row sits in the production district of its overlay subdistrict"
+ },
+ "categoricalCueContract": {
+  "registry": "landometer-series-10-v8",
+  "bindBy": "group id (js/cues.js#GROUP_SERIES)",
+  "groups": {
+   "admin": {
+    "series": 1,
+    "th": "ปกครองและท้องถิ่น",
+    "office": true
+   },
+   "police": {
+    "series": 2,
+    "th": "ตำรวจ",
+    "office": true
+   },
+   "fire": {
+    "series": 3,
+    "th": "ดับเพลิง",
+    "office": true
+   },
+   "justice": {
+    "series": 4,
+    "th": "ศาลและยุติธรรม",
+    "office": true
+   },
+   "military": {
+    "series": 5,
+    "th": "ทหาร",
+    "office": true
+   },
+   "unclassified": {
+    "series": 9,
+    "th": "ยังไม่ระบุหมวด",
+    "office": true
+   },
+   "education": {
+    "series": 7,
+    "th": "การศึกษาและแหล่งเรียนรู้",
+    "office": false
+   },
+   "religion": {
+    "series": 8,
+    "th": "ศาสนาและโบราณสถาน",
+    "office": false
+   },
+   "community": {
+    "series": 10,
+    "th": "ชุมชนและสมาคม",
+    "office": false
+   }
+  },
+  "noStar": true,
+  "sizeCue": "symbol area ∝ recorded personnel (radius = k(zoom)·√(personnel/100), cap 1,000, min 1.6 px; js/model.js#pinRadius); an office with unknown personnel hollow at the 40-person size; places of the other groups filled at that size"
+ },
+ "framesContract": {
+  "index": "data/area-index.json — 928 districts and 77 provinces, no geometry (codes, names, production areaSqm, label, bbox)",
+  "frames": "data/frames/{CODE}.json — district outlines per province (77 files)",
+  "loading": "the selection’s provinces at once; the provinces under the map at district zoom (≤ 6 per move); never all 77 up front; versioned with the release tag",
+  "failure": "reported and retried on the next request; panels, charts and table never depend on outlines"
+ },
+ "mapFocusContract": {
+  "principle": "detail only for the focused part — the selected district, the station, the office, the automatic or explicit focus; everything else visible but quiet",
+  "states": {
+   "auto": "default top districts; released when none of them is on screen",
+   "explicit": "?areas=a,b,c",
+   "none": "?areas=all"
+  },
+  "choropleth": "count (offices) or li.supply (personnel), 41-sample ramp by rank, under the basemap’s first line layer; zoom 8–14.5; the selected จังหวัด from zoom 4; measured_zero = sample 0 + 2 px zero outline; no_data = hatch"
+ },
+ "contextContract": {
+  "rail": {
+   "source": {
+    "source": "CityMETER · Transit (montri-th/transit)",
+    "commit": "5f5232d077be08929d8a3325b7003be492688b09",
+    "file": "data/transit.json",
+    "sha256": "0916636a7c50a8832f25c073a9b667bc440ee74aef41bdfe499e663e1cc0bb18",
+    "release": "transit-data-2026-10-31-r1",
+    "asOf": "2026-10-31",
+    "rule": "operating = on the operator roster of CityMETER · Transit; construction = a project station, not a service; straight-line distance from the production point to the station reference point, up to 2000 m"
+   },
+   "drawn": "every operating station as a quiet ring from zoom 10.5 (names from 13.5), clickable → station panel; the open station’s 500 m radius dashed",
+   "office": "nearest operating station within 2 km and nearest station under construction (“กำลังสร้าง”), straight line"
+  },
+  "events": {
+   "tab": "06_RECENT_PROD_GAPS",
+   "rows": 97,
+   "rule": "dated moves, new office buildings and service points 2024–2026 that production does not hold at their new place; linked to the production row the sheet names"
+  },
+  "ministry": {
+   "tab": "01_AGENCIES",
+   "rows": 458,
+   "rule": "exact name of the row's agency (gov_name; for points without a category also the point's own name) = an agency of OPDC/DGA"
+  }
+ },
+ "servicesContract": {
+  "module": "js/profile-model.js#nearestServicesOf, SERVICES, servicePresence",
+  "services": {
+   "district": "ที่ว่าการอำเภอ (1010)",
+   "local": "สำนักงานท้องถิ่น (1020–1060)",
+   "police": "สถานีตำรวจ (1070)",
+   "fire": "สถานีดับเพลิง (1121)",
+   "court": "ศาล (1152, 1162, 1172, 1182, 1192, 1202, 1210)"
+  },
+  "rule": "the nearest office of the kind with a point, straight line, ≤ 30 km, never the office itself; a slot only where production types that service in the point’s province (Bangkok: police and fire)",
+  "reads": "every loaded row (not the filters)",
+  "never": "a jurisdiction, a service area, the office to contact"
+ },
+ "nearbyContract": {
+  "module": "js/profile-model.js#nearbyOf",
+  "rule": "same group, ≤ 2,000 m straight line, nearest first, ten shown, every loaded row",
+  "around": "every loaded row within 2 km (any group) beside it",
+  "heading": "หน่วยงานรอบ ๆ",
+  "never": "a ranking or a catchment"
+ },
+ "eventsContract": {
+  "source": "06_RECENT_PROD_GAPS (97 events, 2567–2569)",
+  "shown": "overview and district (newest first, six then the rest folded), the office it replaces (a dated box first)",
+  "fields": "kind, date as announced and what it means, new and old place as written, the agency’s announcements (public https), the production row it replaces where the sheet names it",
+  "scope": "the government offices without a type or search filter",
+  "never": "a map link, a coordinate source, a claim that the move is complete"
+ },
+ "contextActionsContract": {
+  "module": "js/ask.js#contextActions",
+  "views": [
+   "office",
+   "building",
+   "area",
+   "station",
+   "type",
+   "overview"
+  ],
+  "ai": "Google Search with a question written for the view (0.3.3: /search?q=, answered at the top by Google’s AI Overview, AI Mode one tab away; never udm=50, which Google stops at “Continue with this search?” from another site)",
+  "maps": "Google Maps search by public names",
+  "streetView": "only with a point (production point, station reference point “ใกล้สถานี”)",
+  "dataBoundary": "Google’s answers are Google’s: never copied into the data"
+ },
+ "buildingJoinContract": {
+  "buildings": "focus-tier footprints: OpenStreetMap (pieces of one outline cut by tile edges, building:parts, podium + tower grouped) or, inside a CityMETER unit, CityMETER Building V4 (whole buildings, keys cm:)",
+  "points": "office points of the scope",
+  "rule": "display-time point-in-footprint (js/building-join.js#joinBuildings)",
+  "click": "one office → the office; several → the building panel “หน่วยงานในอาคารนี้” (“สูงราว”, the outline source in the title and the provenance line)",
+  "neverChanges": "any count or district membership",
+  "nearest": "an office whose point falls in no outline is framed on the nearest drawn building (cameraContract.buildingView.target) — never joined, counted or listed"
+ },
+ "interactionContract": {
+  "mapClicks": "focus pin → the building being looked at (x-ray: frame again) → focus building → station → province view district / province frame (below zoom 8) → district",
+  "reframe": "every way into a building view frames it again",
+  "quietDots": "never focusable or clickable",
+  "keyboard": "roving tabindex over HTML pins from zoom 15.5; roving tablist for chart views; arrow keys on the measure switch; visible focus everywhere"
+ },
+ "basemapContract": {
+  "generator": "js/map-style.js (no hosted style URL)",
+  "tiles": "https://tiles.openfreemap.org/planet (OpenMapTiles schema)",
+  "palette": "--basemap-* tokens of assets/theme.css; data colours never set there",
+  "water": "light: --basemap-water #CFDDE7 (basemap-only, 1.22:1 from the ground) and the shore line water-shore --basemap-shore #B2C7D6 (1.26:1 from the water), drawn above the district fill and beneath footprints and roads; rivers --basemap-water-line; dark: LDS surface.blueTint #18333E with shore #1F3F4C (owner 2026-11-02 “… ดูเหมือนน้ำมากกว่านี้ … แต่ยัง clean and quiet”)"
+ },
+ "massingContract": {
+  "cityTier": "basemap building extrusions, quiet, faded with distance from the focus; OpenFreeMap features replaced by CityMETER buildings are hidden (one hashed match) and their buildings outside the focus come back in a context layer drawn the same way",
+  "focusTier": "rounded footprints from z14 tiles in the focus regions (≤ 16 tiles nearest the camera; from zoom 12 in 3D when complete, else 13): OpenStreetMap, or CityMETER Building V4 tiles (≤ 40 requests, per อปท. or แขวง) inside CityMETER units",
+  "hostTier": "unused (no host geometry in this product)",
+  "rounding": "roundingRadiusM(zoom) 3–12 m",
+  "enclosure": "encloseOffsetM keeps the rounded shape around the original outline",
+  "buildingSource": "per unit from data/building-units/ (built by montri-th/hotel scripts/build-building-units.py, copied by scripts/adapt-building-units.py): CityMETER Building V4 when its count ≥ 1.15 × the OSM count of the unit (owner 2026-11-01), else OSM; units the Hotel build did not evaluate draw OSM; OSM buildings mapped in parts stay inside CityMETER units; a missing CityMETER tile leaves its part on OSM",
+  "terrain": "fill-extrusions stand on the terrain at their centroid (MapLibre); the building camera fits on the anchor's ground plane and the landed centre's ground; the x-ray solid is lifted the same way"
+ },
+ "cameraContract": {
+  "presets": {
+   "plan": "pitch 0 (3D off)",
+   "city": "pitch 56 · bearing 28 · fov 36.87 (overview)",
+   "model": "pitch 60 · fov 14 (district, office without a point)",
+   "eye": "pitch 75 · fov 24 (the building view: building, office with a point)"
+  },
+  "fitting": "fitPitched (overview, district): flat fit, then zoom out until every outline vertex is inside the padded viewport, then in while it still fits; pitch ≤ 90 − fov/2 − 3",
+  "buildingView": {
+   "owner": "2026-10-29 19:47 “อาคารที่เลือก หรือ on focus ให้แสดงด้วยมุมมอง 2-point perspective เสมอ zoom to fit viewport เสมอด้วย”",
+   "module": "js/camera.js#fitBuilding, twoPointBearing, wallAzimuth, occlusionScore, screenBounds (from CityMETER · Shopping centers); js/app.js#frameFocus",
+   "target": "js/app.js#focusTarget — the open building; the building the open office’s point falls in, else (the Hotel rule of 2026-11-02 “… ต้องแสดง 2-point perspective ของ 3d building mass ทุกกรณี”) the drawn building nearest the office’s point: js/building-join.js#nearestBuilding — distance from the point to the outline on a local plane, within 300 m (SCHOOL_REACH_M), the largest piece within 10 m of the nearest; when nothing is drawn within 300 m the focus tier is loaded once more for 800 m round the point (SCHOOL_REACH_FAR_M); legend “อาคารใกล้หมุด”, framed with the point (one zoom step wider, maxZoom 20); a camera choice only, never a join, a count or a located-in claim",
+   "bearing": "dominant wall azimuth + 45°, on the diagonal where the drawn focus buildings (massing.obstaclesNear, 400 m) hide least of it, then the one nearest the current bearing",
+   "fit": "eye preset; shift lens (0.3.2, js/camera.js#lensPadding): padding moves the principal point up to the free box’s centre, never below the canvas centre (pitch + fov/2 < 90 keeps the horizon out), so the camera looks straight at the building at pitch 75 on a phone’s strip above the sheet as on a desktop; fit points = the pieces as the focus tier draws them at building zoom (massing.fitPointsOf → js/massing.js#footprintFitPoints: the offset and fillets of zoom 18, ground and roof), never the shape drawn at the starting zoom (up to 3.6 m wider on every side); every one inside the free box (js/app.js#visibleBox: below the toolbar, above the Aha card, legend, chart tray, table or open phone sheet, left of the zoom control), one side filling 94% of it; maxZoom 21 when the building is known (js/camera.js#BUILDING_MAX_ZOOM — offices stand in low buildings across a campus; the Shopping centers limit 19.5 left a 40 m building at half the box) / 18 while unknown, minZoom 14",
+   "unknown": "a 90 m box round the point (12 m tall) framed the same way while the buildings load, and where nothing is drawn within 800 m; the camera turns to the building when it arrives, at most three times, never after a user camera move",
+   "plan": "3D off: the same footprint fitted flat (fitPitched plan, maxZoom 21 known / 18 unknown)",
+   "click": "selectOffice (pin, label, list row, search) and selectBuilding switch the map to 3D (js/app.js#ensure3d) before framing; a link keeps view3d=0 when it asks for it",
+   "terrain": "on terrain each fit point carries the ground it is drawn on (4th value: roof at the piece centroid’s ground, base at the lowest ground under its outline, the pin at its own ground); fitBuilding damps its landed rounds (half steps) and js/maplibre-guard.js#guardElevationFreeze lands the centre on the ground after every programmatic ease (MapLibre 5.6.2 leaves map._elevationFreeze on); refitted when the ground changes by ≥ 3 m, a new building arrives or the free box changes once the camera is still (js/app.js#watchFreeBox: legend, trays, phone sheet), at most 3 times, never after a user camera move",
+   "lift": "0.3.2: MapLibre 5.6.2 lifts a camera that would stand inside the terrain (Map#_elevateCameraIfInsideTerrain: lower pitch, other zoom) on every jump; fitBuilding computes with it off (withoutLift) and asks MapLibre’s own check about the camera it found — the alternates (the other corners, opposite first: js/app.js#frameFocus) when that camera would be lifted, else the pitch MapLibre allows; the target carries its pitch and the centre’s elevation (an instant jump checks from the right height)"
+  }
+ },
+ "tileCoverGuard": {
+  "module": "js/maplibre-guard.js#guardRetainedTiles(map, version) → boolean; padOverscaledChildren(idealTileIDs, zoom, maxzoom)",
+  "bug": "MapLibre GL JS 5.6.2 SourceCache._updateRetainedTiles checks the four children of a missing ideal tile whenever the cover zoom + 1 ≤ the source maxzoom; a pitched cover can already hold an ideal tile at the maxzoom, whose children() is ONE overscaled child; when that child is retained, children[1] is undefined and the frame throws “Cannot read properties of undefined (reading 'key')”",
+  "seen": "live 2026-10-29 (Claude desktop browser, real OpenFreeMap tiles): openmaptiles (vector, maxzoom 14), cover zoom 13, camera 13.79–13.95, pitch 75, while the building camera flew between branches; reproduced in the build container by stepping the pitched camera out from 19.5 to 13.6 over a building (7–8 errors on 0.2.0, 0 with the guard)",
+  "fix": "pad the child list of exactly those ideal tiles to four copies of the overscaled child, so the check reads as MapLibre's own overzoom branch; installed on the shared SourceCache prototype at every style load; only for version 5.6.2",
+  "test": "tests/maplibre-guard.test.js",
+  "elevationFreeze": "js/maplibre-guard.js#guardElevationFreeze(map, version), 0.3.2: MapLibre 5.6.2 easeTo/flyTo on terrain without freezeElevation leave map._elevationFreeze on (only a gesture or _finalizeElevation clears it), so the render loop stops clamping the centre to the ground and the framed building drifts (seen 2026-11-02: camera 80.97 m vs ground 62.41 m at Sri Panwa); the guard wraps map._afterEase: when the ease ended (not superseded) and no terrain gesture is running, it clears the freeze and sets the centre elevation to the ground; only for version 5.6.2 (tests/maplibre-guard.test.js)"
+ },
+ "venueXrayContract": {
+  "owner": "2026-10-29 19:47 “เช็คอย่าให้ 3d building mass ตึกอื่นบังอาคารที่กำลังดูอยู่”",
+  "module": "js/venue-xray.js#installVenueXray(map, {beforeId, toMercator, colors}) → {update(features, {colors}), setEnabled, hitTest(point), dispose, count, enabled, failed} (from CityMETER · Shopping centers / Luxury Brands)",
+  "layer": "venue-xray (custom, renderingMode 3d) before place-quarter (js/map-style.js#VENUE_XRAY_BEFORE): drawn over every building and over road names",
+  "input": "the features of the building being looked at (massing.featuresOf(target.refs)) with display_height_m / display_base_m; on terrain the roof is lifted by the ground at the piece centroid (as MapLibre lifts fill-extrusions) and the walls go down to the lowest ground under the outline (0.3.2; a fixed 10 m showed through the slope)",
+  "depth": "scissored depth clear inside the building’s screen box, then its own depth test",
+  "seeThrough": "massing.setScene('eye', rings): the focus buildings standing in front of it turn see-through (SCENE.eye)",
+  "labels": "district label chips never sit on the building (refreshLabelView avoid box); since 0.3.2 neither do the offices’ name labels (js/labels.js#installOfficeLabels avoid → buildingScreenBox)",
+  "visibility": "3D only, zoom ≥ 13 (XRAY_MIN_ZOOM); empty outside the building view",
+  "colours": "map.activeLayer faces, map.selectedStroke edges — map roles, not data colours",
+  "failSafe": "a GL error disables it (failed = true); the massing highlight keeps drawing",
+  "geojsonMaxzoom": "every GeoJSON source uses maxzoom 24 (js/map-layers.js#GEOJSON_MAXZOOM, the most geojson-vt allows), two levels above BUILDING_MAX_ZOOM: MapLibre 5.6.2 throws in SourceCache._updateRetainedTiles when the near tiles of a pitched cover reach a GeoJSON source maxzoom before they have data (seen in CityMETER · Shopping centers 2026-10-25); under the eye preset the near tiles sit up to about half a level above the camera (tests/release.test.js)"
+ },
+ "breadcrumbContract": {
+  "levels": [
+   "ประเทศไทย",
+   "จังหวัด",
+   "เขต/อำเภอ"
+  ],
+  "productionPath": "/v3/citymeter/{code}/D/{district}?d=governmentOfficer",
+  "demoQuery": "?province=NMA&area=3001",
+  "provinceCodes": "production route codes (base info lv0 abbrEn)",
+  "datasetCode": "governmentOfficer (production CityMETER Government Officer layer, API government-agency, checked 2026-11-06)"
+ },
+ "provinceContract": {
+  "frames": "data/provinces.geojson",
+  "fill": "the measure below zoom 8 without a province filter",
+  "labels": "ink chips to zoom 9",
+  "unknown": "none in this release"
+ },
+ "pictogramContract": {
+  "file": "assets/icons/material-pictogram-300.woff2",
+  "sha256": "68abef6704de6bceaec0ac3856e78b7c0243a774c6f787ba4f5b8f4f4ec443da",
+  "glyphs": [
+   "area",
+   "province",
+   "segment",
+   "ai",
+   "streetview",
+   "maps",
+   "building",
+   "office",
+   "staff",
+   "type",
+   "moved",
+   "opened",
+   "service",
+   "school",
+   "rail",
+   "compare",
+   "sea",
+   "elevation",
+   "relief",
+   "forest",
+   "rank",
+   "date",
+   "distance",
+   "construction",
+   "dataset"
+  ],
+  "rule": "decorative (aria-hidden); the text carries the meaning; no star"
+ },
+ "panel": {
+  "modes": [
+   "overview (+ type card)",
+   "area",
+   "station",
+   "building",
+   "office"
+  ],
+  "actions": [
+   "select-area",
+   "select-office",
+   "select-building",
+   "select-station",
+   "select-province",
+   "filter-type",
+   "filter-group",
+   "set-metric",
+   "back",
+   "explore-top",
+   "clear-focus",
+   "open-charts",
+   "open-table",
+   "clear-filter",
+   "leave-area"
+  ],
+  "models": {
+   "overview": "js/profile-model.js#buildOverview",
+   "area": "buildAreaProfile",
+   "station": "buildStationProfile (+ nearestServicesOf)",
+   "building": "buildBuildingProfile",
+   "office": "buildOfficeDetail (+ nearbyOf, nearestServicesOf)",
+   "type": "buildTypeProfile"
+  },
+  "provenance": "exactly one line per view: dataset · source (+ announcements / Transit / terrain when shown) · date · boundary, then “วิธีนับ” (DATA_METHOD.md); no caveat on screen"
+ },
+ "data": {
+  "file": "data/offices.json",
+  "groupFiles": {
+   "education": {
+    "file": "data/groups/education.json",
+    "rows": 74139,
+    "bytes": 7643446,
+    "sha256": "47642e1471f7f5d9d1962b45cd343c6693c7c0721cbb0797bc8449b01744c5e3"
+   },
+   "religion": {
+    "file": "data/groups/religion.json",
+    "rows": 109289,
+    "bytes": 10367051,
+    "sha256": "a719f4d94e57c4a6bafb3b8487ab4d66fd8b48bbd6505c25728b0857bde5c612"
+   },
+   "community": {
+    "file": "data/groups/community.json",
+    "rows": 227050,
+    "bytes": 17861824,
+    "sha256": "df209696902fde15bb9df94f8e4e5daecbd0e0109c1496416d84eb9c7baa3c40"
+   }
+  },
+  "rows": 430199,
+  "points": 440005,
+  "officeRows": 19721,
+  "counts": {
+   "points": 440005,
+   "rows": 430199,
+   "officeRows": 19721,
+   "repeatPoints": 9806,
+   "repeatPointsByGroup": {
+    "admin": 640,
+    "community": 5131,
+    "religion": 2132,
+    "education": 1696,
+    "police": 146,
+    "justice": 12,
+    "military": 9,
+    "fire": 36,
+    "unclassified": 4
+   },
+   "staffSharedRows": 182,
+   "staffSharedPersonnel": 14548,
+   "groups": {
+    "admin": 9027,
+    "police": 6402,
+    "fire": 2234,
+    "justice": 460,
+    "military": 699,
+    "unclassified": 899,
+    "education": 74139,
+    "religion": 109289,
+    "community": 227050
+   },
+   "staffRows": 10095,
+   "staff": 535745,
+   "agencyStaffRows": 177,
+   "rawOfficer": 9953796,
+   "districts": 925,
+   "provinces": 77,
+   "events": 97,
+   "eventsMatched": 18,
+   "eventsWithPoint": 9,
+   "ministryRows": 207376,
+   "railWithin2km": 1691
+  },
+  "reconciliation": {
+   "cells": 9046,
+   "mismatches": 0,
+   "countryRows": 440005,
+   "rule": "rows and Σ officer per production district × category equal government-agency info lv0"
+  },
+  "staffRules": {
+   "1010": "scale",
+   "1050": "site",
+   "1040": "site",
+   "1030": "site",
+   "1020": "site",
+   "1060": "none",
+   "1070": "none",
+   "1080": "constant",
+   "1090": "constant",
+   "1121": "site",
+   "1182": "site",
+   "1192": "site",
+   "1202": "scale",
+   "1152": "site",
+   "1162": "scale",
+   "1172": "scale",
+   "1210": "constant",
+   "1142": "site",
+   "1130": "constant",
+   "1100": "site",
+   "1110": "site",
+   "": "agency",
+   "2010": "other",
+   "2020": "other",
+   "2030": "other",
+   "2040": "other",
+   "2050": "other",
+   "2060": "other",
+   "2070": "other",
+   "2080": "other",
+   "2090": "other",
+   "2100": "other",
+   "2110": "other",
+   "2120": "other",
+   "2130": "other",
+   "2140": "other",
+   "2150": "other",
+   "2160": "other",
+   "2170": "other",
+   "2180": "other",
+   "2190": "other",
+   "2200": "other",
+   "2210": "other",
+   "3030": "other",
+   "3040": "other",
+   "3050": "other",
+   "3060": "other",
+   "3070": "other",
+   "3080": "other",
+   "3090": "other",
+   "3100": "other",
+   "3110": "other",
+   "3120": "other",
+   "3010": "other",
+   "3020": "other",
+   "4013": "other",
+   "4023": "other",
+   "4033": "other",
+   "4043": "other",
+   "4050": "other",
+   "4060": "other"
+  },
+  "excludedFields": [
+   "phone",
+   "website",
+   "address",
+   "email_address",
+   "production_row_id (full UUID; the key is its first 10 hex)",
+   "gov_office_id",
+   "overlay_subdistrict_ids",
+   "researcher summaries and gap reasons (06)",
+   "private sheet links",
+   "02_OFFICE_CANDIDATES rows (DOPA/BMA name list with repeats)",
+   "01_AGENCIES contact addresses and evidence ids",
+   "map links and coordinate source links (06 แหล่งพิกัด)"
+  ]
+ },
+ "visualSystem": {
+  "lds": "Landometer-Design-System-v0.9.7.md (standalone-0.9.7-r1, v0.9.7-owner.1, color-srgb-10, sha256 d3085cbc…96)",
+  "locationIntelligence": "Location-Intelligence-Profile-for-LDS-v0.9.7.md (location-intelligence-profile-lds-0.9.7-r1, sha256 5d485604…3c): li.supply",
+  "parity": "scripts/check-lds-parity.mjs — 124 checks",
+  "themes": "light and dark; analytical HEX identical on both",
+  "fonts": "Bai Jamjuree · IBM Plex Sans Thai Looped · Arvo · JetBrains Mono (assets/lds/build-kit)"
+ },
+ "invariants": [
+  {
+   "id": "G1",
+   "rule": "unknown personnel is never 0 (counted apart; district no_data under personnel; tiles “—”; chips read offices)"
+  },
+  {
+   "id": "G2",
+   "rule": "one office per production point or per repeated points of one office (≤ 100 m, same type and name, same province); every production point in exactly one row"
+  },
+  {
+   "id": "G3",
+   "rule": "rows and Σ officer per production district × category equal production’s government-agency info (the build stops otherwise)"
+  },
+  {
+   "id": "G4",
+   "rule": "membership is the production district of the point’s overlay subdistrict; never re-assigned on screen"
+  },
+  {
+   "id": "G5",
+   "rule": "distances are straight lines between reference points; never walking time, a jurisdiction or a catchment"
+  },
+  {
+   "id": "G6",
+   "rule": "the Aha never cuts a tie and never focuses every district holding the measure"
+  },
+  {
+   "id": "G7",
+   "rule": "every panel view ends with exactly one provenance line and carries no caveat on screen"
+  },
+  {
+   "id": "G8",
+   "rule": "a local government’s personnel is counted once per organisation; an agency’s whole workforce is shown on its head office only"
+  },
+  {
+   "id": "G9",
+   "rule": "the nearest services name only services production types in the point’s province"
+  },
+  {
+   "id": "G10",
+   "rule": "places of education, religion and community load on demand and read as “สถานที่” without personnel"
+  },
+  {
+   "id": "G11",
+   "rule": "no telephone, e-mail, address, website, full UUID, office id, researcher note, map link or private link is published"
+  },
+  {
+   "id": "G12",
+   "rule": "colours only from assets/theme.css, js/scales.js and js/cues.js; all 41 samples of every ramp; no star cue"
+  }
+ ],
+ "chartContracts": [
+  {
+   "viewKey": "areas",
+   "title": "เขต/อำเภอ",
+   "question": "เขต/อำเภอไหนมีหน่วยงาน (หรือบุคลากร) มากที่สุด",
+   "encoding": "bars in the map’s ramp colour, top 20 of every ranked district",
+   "metric": "the current measure",
+   "scope": "scopeRows"
+  },
+  {
+   "viewKey": "mix",
+   "title": "หมวด",
+   "question": "แต่ละเขต/อำเภอมีหน่วยงานหมวดใด",
+   "encoding": "top 12 districts × the groups the selection holds, equal cells, own 41-sample ramp, measured zero outlined, unknown personnel a dash",
+   "metric": "the current measure",
+   "scope": "scopeRows"
+  },
+  {
+   "viewKey": "types",
+   "title": "ประเภท",
+   "question": "ประเภทไหนมีหน่วยงาน (หรือบุคลากร) มากที่สุด",
+   "encoding": "bars in one neutral foundation fill with the group cue, the other measure and the full type name in the label; click filters the type",
+   "metric": "the current measure",
+   "scope": "scopeRows"
+  }
+ ],
+ "delivery": {
+  "site": "GitHub Pages from main /root",
+  "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
+  "liveCheck": "npm run verify:live",
+  "cacheTag": "?v=20261106-r1 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+ }
+}

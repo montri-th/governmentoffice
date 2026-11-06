@@ -1,0 +1,421 @@
+{
+ "$schema": "./handoff.schema.json",
+ "schemaVersion": "1.5.0",
+ "productId": "citymeter-governmentoffice",
+ "productVersion": "0.1.0",
+ "updatedOn": "2026-11-06",
+ "documentType": "implementation-plan",
+ "architecture": {
+  "runtime": "static site (GitHub Pages), ES modules with an import map, no build step; Node ≥ 20 for tests, Python 3 for data builds",
+  "commands": {
+   "start": "npm start",
+   "test": "npm test",
+   "lds": "npm run check:lds -- --lds <LDS> --li <LI>",
+   "live": "npm run verify:live",
+   "data": "python3 -I scripts/build-data.py …"
+  },
+  "libraries": {
+   "maplibre-gl": "5.6.2 (unpkg, pinned)",
+   "tiles": "OpenFreeMap planet (OpenMapTiles)",
+   "charts": "none (HTML)"
+  },
+  "modules": [
+   "js/app.js",
+   "js/area-insight.js",
+   "js/areas.js",
+   "js/ask.js",
+   "js/breadcrumb.js",
+   "js/building-join.js",
+   "js/building-units.js",
+   "js/camera.js",
+   "js/chart-model.js",
+   "js/charts.js",
+   "js/cues.js",
+   "js/frames.js",
+   "js/geometry.js",
+   "js/labels.js",
+   "js/launch.js",
+   "js/map-layers.js",
+   "js/map-style.js",
+   "js/maplibre-guard.js",
+   "js/massing.js",
+   "js/model.js",
+   "js/mvt.js",
+   "js/navigation.js",
+   "js/panel.js",
+   "js/pins.js",
+   "js/profile-model.js",
+   "js/provinces.js",
+   "js/scales.js",
+   "js/stations.js",
+   "js/terrain.js",
+   "js/vendors.js",
+   "js/venue-xray.js"
+  ],
+  "data": [
+   "data/offices.json",
+   "data/groups/education.json",
+   "data/groups/religion.json",
+   "data/groups/community.json",
+   "data/area-index.json",
+   "data/frames/{CODE}.json",
+   "data/provinces.geojson",
+   "data/boundary-receipts.json",
+   "data/building-units/"
+  ]
+ },
+ "selection": {
+  "filterFields": [
+   "search",
+   "group",
+   "type",
+   "province"
+  ],
+  "queryFields": [
+   "search",
+   "group",
+   "type",
+   "province",
+   "metric",
+   "area",
+   "areas",
+   "view",
+   "office",
+   "station",
+   "view3d"
+  ],
+  "rowScopes": {
+   "scopeRows": "rows after search · group · type · province, before any district selection or focus: the comparison base of the Aha, the choropleth, the charts and every rank",
+   "baseRows": "scopeRows narrowed by the selected เขต/อำเภอ",
+   "rows": "baseRows narrowed by the district focus: pins with detail, counters, the table"
+  },
+  "panelActions": [
+   "select-area",
+   "select-office",
+   "select-building",
+   "select-station",
+   "select-province",
+   "filter-type",
+   "filter-group",
+   "set-metric",
+   "back",
+   "explore-top",
+   "clear-focus",
+   "open-charts",
+   "open-table",
+   "clear-filter",
+   "leave-area"
+  ],
+  "groupLoading": "group ∈ {education, religion, community, all}: data/groups/<group>.json fetched once (?v=<sha8>), appended (js/model.js#appendGroupRows), then the filter is committed (js/app.js#setGroup)"
+ },
+ "tasks": [
+  {
+   "id": "T1",
+   "title": "Read the research sheet cell by cell in the owner’s browser (05 in its compact form, 06 with its hyperlinks); tab hashes",
+   "dependsOn": [],
+   "acceptanceCriteria": [
+    "A1"
+   ],
+   "files": [
+    "scripts/export-sheet-tabs.js",
+    "scripts/join-compact-payload.py",
+    "scripts/decode-sheet-payload.py"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T2",
+   "title": "Data build: rows, repeats, groups, types, personnel rules, membership, rail, events, ministries; reconciliation with production",
+   "dependsOn": [
+    "T1",
+    "T3"
+   ],
+   "acceptanceCriteria": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6"
+   ],
+   "files": [
+    "scripts/build-data.py",
+    "data/offices.json",
+    "data/groups/"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T3",
+   "title": "Production base info and government-agency info with receipts; district index; building units from the Hotel build",
+   "dependsOn": [],
+   "acceptanceCriteria": [
+    "A7"
+   ],
+   "files": [
+    "scripts/fetch-base.py",
+    "scripts/build-receipts.py",
+    "scripts/build-boundaries.py",
+    "scripts/adapt-building-units.py",
+    "data/boundary-receipts.json",
+    "data/area-index.json"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T4",
+   "title": "Model, filters and on-demand group loading",
+   "dependsOn": [
+    "T2"
+   ],
+   "acceptanceCriteria": [
+    "A3",
+    "A8"
+   ],
+   "files": [
+    "js/model.js",
+    "js/app.js"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T5",
+   "title": "First Aha and district models",
+   "dependsOn": [
+    "T4"
+   ],
+   "acceptanceCriteria": [
+    "A9",
+    "A10"
+   ],
+   "files": [
+    "js/area-insight.js",
+    "js/map-layers.js",
+    "js/provinces.js"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T6",
+   "title": "Panels: overview, district, station, building, office, type card; nearest services, offices round an office, moves and openings",
+   "dependsOn": [
+    "T4"
+   ],
+   "acceptanceCriteria": [
+    "A11",
+    "A12",
+    "A13",
+    "A14"
+   ],
+   "files": [
+    "js/profile-model.js",
+    "js/panel.js",
+    "js/ask.js"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T7",
+   "title": "Charts and table",
+   "dependsOn": [
+    "T4"
+   ],
+   "acceptanceCriteria": [
+    "A15"
+   ],
+   "files": [
+    "js/chart-model.js",
+    "js/charts.js"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T8",
+   "title": "Map: pins sized by personnel, labels, pictograms, legend",
+   "dependsOn": [
+    "T4"
+   ],
+   "acceptanceCriteria": [
+    "A16"
+   ],
+   "files": [
+    "js/pins.js",
+    "js/labels.js",
+    "js/cues.js",
+    "scripts/build-pictogram-font.py",
+    "styles.css"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T9",
+   "title": "Docs, handoff, release tag; publish; registry row",
+   "dependsOn": [
+    "T5",
+    "T6",
+    "T7",
+    "T8"
+   ],
+   "acceptanceCriteria": [
+    "A17",
+    "A18"
+   ],
+   "files": [
+    "README.md",
+    "DATA_METHOD.md",
+    "PRODUCT_STATEMENT.md",
+    "handoff/",
+    "index.html"
+   ],
+   "status": "done"
+  }
+ ],
+ "acceptanceCriteria": [
+  {
+   "id": "A1",
+   "scenario": "decode offices.json",
+   "expected": "19,721 office rows, nothing dropped, keys unique, every tab hashed",
+   "verificationType": "unit (tests/data.test.js)"
+  },
+  {
+   "id": "A2",
+   "scenario": "reconciliation with production",
+   "expected": "9,046 district × category cells, 0 mismatches; 440,005 points",
+   "verificationType": "build + unit (tests/data.test.js)"
+  },
+  {
+   "id": "A3",
+   "scenario": "group files",
+   "expected": "bytes and SHA-256 as data/offices.json names them; all groups = every production point in exactly one row",
+   "verificationType": "unit (tests/data.test.js)"
+  },
+  {
+   "id": "A4",
+   "scenario": "repeats",
+   "expected": "Σ (points − 1) = 9,806",
+   "verificationType": "unit (tests/data.test.js)"
+  },
+  {
+   "id": "A5",
+   "scenario": "personnel contract",
+   "expected": "known only for site types; Σ 535,745; local government once; agency totals apart; unknown never 0",
+   "verificationType": "unit (tests/data.test.js)"
+  },
+  {
+   "id": "A6",
+   "scenario": "publication hygiene",
+   "expected": "no contact field, full UUID, map link, private or Google document link; https only",
+   "verificationType": "unit (tests/data.test.js, tests/release.test.js)"
+  },
+  {
+   "id": "A7",
+   "scenario": "boundaries",
+   "expected": "928 districts, 77 provinces, 78 receipts bound by hash",
+   "verificationType": "unit (tests/data.test.js)"
+  },
+  {
+   "id": "A8",
+   "scenario": "group scope",
+   "expected": "?group=religion loads its file before the first paint; the switch reads places without personnel",
+   "verificationType": "rendered (Playwright) + unit (tests/views.test.js)"
+  },
+  {
+   "id": "A9",
+   "scenario": "first Aha",
+   "expected": "22% ของหน่วยงานรัฐในนครราชสีมา (158 จาก 715 แห่ง) อยู่ใน 3 อำเภอนี้; outside เมืองนครสวรรค์ 84",
+   "verificationType": "unit (tests/insight.test.js, tests/views.test.js)"
+  },
+  {
+   "id": "A10",
+   "scenario": "district model",
+   "expected": "EVID-05 states; 41-sample ramps; 3 districts a measured 0",
+   "verificationType": "unit (tests/insight.test.js)"
+  },
+  {
+   "id": "A11",
+   "scenario": "provenance",
+   "expected": "exactly one line per view, no caveat on screen",
+   "verificationType": "unit (tests/views.test.js)"
+  },
+  {
+   "id": "A12",
+   "scenario": "nearest services",
+   "expected": "nearest of each kind ≤ 30 km, optimal, never itself; Bangkok police and fire only",
+   "verificationType": "unit (tests/views.test.js)"
+  },
+  {
+   "id": "A13",
+   "scenario": "moves and openings",
+   "expected": "97 events newest first, https announcements, 18 linked rows",
+   "verificationType": "unit (tests/data.test.js, tests/views.test.js)"
+  },
+  {
+   "id": "A14",
+   "scenario": "Google actions",
+   "expected": "plain search with the question of the view; Street View only with a point",
+   "verificationType": "unit (tests/views.test.js)"
+  },
+  {
+   "id": "A15",
+   "scenario": "charts",
+   "expected": "districts, district × group, types by the measure",
+   "verificationType": "unit (tests/views.test.js)"
+  },
+  {
+   "id": "A16",
+   "scenario": "symbols and labels",
+   "expected": "area ∝ personnel, hollow = unknown office; short names Thai readers use",
+   "verificationType": "unit (tests/pins.test.js, tests/labels.test.js)"
+  },
+  {
+   "id": "A17",
+   "scenario": "release",
+   "expected": "one cache tag ?v=20261106-r1; one product version 0.1.0; handoff JSON valid",
+   "verificationType": "unit (tests/release.test.js)"
+  },
+  {
+   "id": "A18",
+   "scenario": "live",
+   "expected": "GitHub Pages bytes equal the repository (npm run verify:live); desktop and 390 px, light and dark walked",
+   "verificationType": "live"
+  }
+ ],
+ "developerWorkflow": [
+  "edit the research sheet only (never data/)",
+  "read the tabs: scripts/export-sheet-tabs.js → scripts/join-compact-payload.py (05) and scripts/decode-sheet-payload.py (the other tabs)",
+  "python3 -I scripts/build-data.py … (DATA_METHOD.md §13)",
+  "npm test",
+  "bump the cache tag in index.html with package.json, design-intent.json and the handoff JSON",
+  "npm run handoff:manifest",
+  "push main (GitHub Pages)",
+  "npm run verify:live; walk the live site at desktop and 390 px, light and dark",
+  "update the registry row research.TH.government_office in place and add a Changes row"
+ ],
+ "backlog": [
+  {
+   "id": "B1",
+   "item": "Bangkok district offices (สำนักงานเขต), the BMA and Bangkok courts as typed offices in production",
+   "evidence": "research follow-up (DATA_METHOD.md §12)"
+  },
+  {
+   "id": "B2",
+   "item": "New places of the 79 events that name no production row",
+   "evidence": "research follow-up"
+  },
+  {
+   "id": "B3",
+   "item": "Personnel for police stations and district offices from a public source",
+   "evidence": "research follow-up"
+  },
+  {
+   "id": "B4",
+   "item": "Evaluate CityMETER Building V4 for every อปท. holding a government office (the Hotel units cover hotel-holding units only)",
+   "evidence": "planned"
+  },
+  {
+   "id": "B5",
+   "item": "Visitors per office (only with a published source)",
+   "evidence": "idea"
+  }
+ ]
+}
