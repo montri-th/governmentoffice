@@ -1,28 +1,28 @@
 #!/usr/bin/env node
-// Research helper for office sites (skills campus-site-join and osm-area-site-join, owner 2026-11-06: “ใช้วิธีนี้ และ
-// เพิ่มวิธีตาม skill ใหม่เพิ่มเติม”). Ported from montri-th/hotel scripts/site-candidates.mjs (commit 177e592). Run from the
-// root of a clone of this repo (Node 20+, no packages). It reads the buildings with the same code the demo map uses
-// (js/massing.js, js/mvt.js, js/building-units.js, js/building-join.js), so a point it writes stands inside a building
-// the map draws. It writes nothing in data/ — a research sheet stays the record; outputs go to sites/ (git-ignored).
+// Research helper for office sites (docs/SITES.md; skills campus-site-join and osm-area-site-join, owner 2026-11-06:
+// “ใช้วิธีนี้ และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม”, “ให้สร้างตัวช่วยฝั่งอาคาร OSM … OK”). Ported from montri-th/hotel
+// scripts/site-candidates.mjs (commit 177e592). Run from the root of a clone of this repo (Node 20+, no packages). It reads
+// the buildings with the same code the demo map uses (scripts/site-buildings.mjs over js/massing.js, js/mvt.js,
+// js/building-units.js, js/building-join.js), so a point it writes stands inside a building the map draws. It writes
+// nothing in data/ — the research sheet stays the record; outputs go to sites/ (git-ignored).
 // A site is a display grouping of the buildings of one office's compound, never a deed, a parcel or ownership.
 //
-//   node scripts/site-candidates.mjs candidates <key> [--reach 400] [--cache <dir>]
+//   node scripts/site-candidates.mjs candidates <key> [--reach 400] [--source auto|cm|osm] [--cache <dir>] [--osm-template <url>]
 //       <key> = the ?office= key (data/offices.json or data/groups/*.json)
 //       → sites/<key>/candidates.json · candidates.png (numbered buildings, north up, pin red)
-//       --cache keeps the tiles read (one file per tile request) so nearby offices do not ask the API again
+//       auto: CityMETER Building V4 where the page draws it, else OpenStreetMap buildings from OpenFreeMap (the tile
+//       template is read from the OpenFreeMap TileJSON unless given; a network that cannot reach OpenFreeMap runs the
+//       OpenStreetMap side in the browser: scripts/sites-browser.js). --cache keeps the tiles read.
 //   node scripts/site-candidates.mjs check <key> --points "lon,lat;lon,lat"
 //       → which drawn building holds each point (a site row's buildings); exits 1 if one is outside
-// The `row` step of the hotel helper (a sheet row with boundary_source) waits for the owner: Government Office has no
-// site tab and no boundary source the dataset contract allows yet (docs/SITES.md).
 import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {deflateSync} from 'node:zlib';
-import {tilesForRegions, planCmRequests, shapeCmTile, roundingRadiusM, encloseOffsetM} from '../js/massing.js';
-import {parseVectorTile} from '../js/mvt.js';
-import {zonesOf, zoneAt, cmTileUrl} from '../js/building-units.js';
-import {footprint, containsPoint, interiorOf} from '../js/building-join.js';
+import {zonesOf} from '../js/building-units.js';
+import {footprint, containsPoint} from '../js/building-join.js';
+import {TILEJSON_URL} from '../js/map-style.js';
+import {siteCandidates, localFrame} from './site-buildings.mjs';
 
-const MAX_SITE_M = 600; // the hotel build's SITE_MAX_M: a site building farther from the office's point is not one site
 const [cmd, venue] = process.argv.slice(2);
 const argv = process.argv.slice(4);
 const opt = (k, d = '') => { const i = argv.indexOf(`--${k}`); return i >= 0 && i + 1 < argv.length ? argv[i + 1] : d; };
@@ -40,12 +40,12 @@ for (const g of data.groups) {
   row = cols.key.indexOf(venue);
 }
 if (row < 0) fail(`${venue} is not in data/offices.json or the group files`);
-const lon0 = cols.lon[row], lat0 = cols.lat[row], officeName = cols.name[row] || '';
-const typeTh = data.types[cols.type[row]]?.th || '';
+const type = data.types[cols.type[row]] || {};
+let officeName = cols.name[row] || '';
+if (officeName.charCodeAt(0) === 1) officeName = (type.prefix || '') + officeName.slice(1); // js/model.js
+const lon0 = cols.lon[row], lat0 = cols.lat[row];
 if (!Number.isFinite(lon0) || !Number.isFinite(lat0)) fail(`${venue} has no point on the map`);
-const kx = 111320 * Math.cos((lat0 * Math.PI) / 180), ky = 110574;
-const toM = ([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * ky];
-const toLL = ([x, y]) => [+(lon0 + x / kx).toFixed(6), +(lat0 + y / ky).toFixed(6)];
+const {toM} = localFrame(lon0, lat0);
 const dir = `sites/${venue}`;
 mkdirSync(dir, {recursive: true});
 
@@ -80,81 +80,40 @@ async function tileBytes(url, key) {
   return buf;
 }
 
+async function osmTemplate() {
+  if (opt('osm-template')) return opt('osm-template');
+  try { return (await (await fetch(TILEJSON_URL)).json()).tiles[0]; }
+  catch { return ''; }
+}
+
 async function candidates() {
-  const reach = Math.min(MAX_SITE_M, Math.max(100, Number(opt('reach', 400)) || 400));
-  const dLon = reach / kx, dLat = reach / ky;
-  const ring = [[lon0 - dLon, lat0 - dLat], [lon0 + dLon, lat0 - dLat], [lon0 + dLon, lat0 + dLat], [lon0 - dLon, lat0 + dLat], [lon0 - dLon, lat0 - dLat]];
   const zones = readdirSync('data/building-units').filter(f => /^[A-Z]{3}\.json$/.test(f))
     .flatMap(f => zonesOf(JSON.parse(readFileSync(`data/building-units/${f}`, 'utf8'))));
-  if (!zoneAt(zones, [lon0, lat0])) fail('the map draws OpenStreetMap buildings at this office, not CityMETER Building V4 — skip this office (osm_area)');
-  const {tiles} = tilesForRegions([ring], 14, 64, [lon0, lat0]);
-  const plan = planCmRequests(tiles, zones, {max: 400, center: [lon0, lat0]});
-  if (!plan.requests.length) fail('the map draws OpenStreetMap buildings here, not CityMETER Building V4 — skip this office (osm_area)');
-  const pieces = [], seen = new Set();
-  const radiusM = roundingRadiusM(18, lat0), offsetM = encloseOffsetM(radiusM);
-  for (const q of plan.requests) {
-    const buf = await tileBytes(cmTileUrl(q.tile, q.tileUnit, q.tileType), q.key);
-    const layer = buf.byteLength ? parseVectorTile(buf).layers['building-detail'] || {extent: 4096, features: []} : {extent: 4096, features: []};
-    pieces.push(...shapeCmTile(q.tile, layer, {regions: [ring], radiusM, offsetM, slot: q.slot, seen}).footprints);
+  const source = opt('source', 'auto');
+  let res;
+  try {
+    res = await siteCandidates({lon: lon0, lat: lat0, reach: opt('reach', 400), zones, source, fetchBytes: tileBytes,
+      osmTemplate: source === 'cm' ? '' : await osmTemplate()});
+  } catch (e) {
+    fail(`${e.message}${/OpenFreeMap/.test(e.message) ? ' — this network cannot reach OpenFreeMap: run scripts/sites-browser.js in the browser (docs/SITES.md)' : ''}`);
   }
-  const list = pieces.map(p => {
-    const fp = footprint({...p, key: p.id});
-    return {fp, point: deepPoint(fp), area_m2: Math.round(Math.abs(areaM(p.outer)) - p.holes.reduce((s, h) => s + Math.abs(areaM(h)), 0)),
-      height_m: Math.round(p.height * 10) / 10, outer: p.outer, holes: p.holes};
-  }).map(c => ({...c, dist_m: Math.round(Math.hypot(...toM(c.point)))})).sort((a, b) => a.dist_m - b.dist_m);
-  list.forEach((c, i) => { c.cid = i + 1; });
-  const out = {venue_id: venue, name: officeName, type: typeTh, point: [lon0, lat0], reach_m: reach, read_on: today(), requests: plan.requests.length,
-    rule: 'CityMETER Building V4 as the demo map draws it (production building/detailMvt z14, version V4); point = a point well inside the building',
-    candidates: list.map(({cid, point, area_m2, height_m, dist_m, outer, holes}) => ({cid, point, area_m2, height_m, dist_m,
+  const list = res.candidates;
+  const out = {venue_id: venue, name: officeName, type: type.th || '', point: [lon0, lat0], reach_m: res.reach, read_on: today(), requests: res.requests,
+    source: res.source === 'cm' ? 'cm_v4' : 'osm_buildings',
+    rule: res.source === 'cm' ? 'CityMETER Building V4 as the demo map draws it (production building/detailMvt z14, version V4); point = a point well inside the building'
+      : 'OpenStreetMap buildings as the demo map draws them (OpenFreeMap z14, the pieces of one building grouped); point = a point well inside its largest piece',
+    candidates: list.map(({cid, point, area_m2, height_m, dist_m, pieces, outer, holes}) => ({cid, point, area_m2, height_m, dist_m, pieces,
       outer: outer.map(q => q.map(v => +v.toFixed(7))), holes: holes.map(h => h.map(q => q.map(v => +v.toFixed(7))))}))};
   writeFileSync(`${dir}/candidates.json`, JSON.stringify(out));
-  writeFileSync(`${dir}/candidates.png`, plot(list, [], null, reach));
-  console.log(`${venue} · ${officeName}: ${list.length} buildings within ${reach} m (${plan.requests.length} tiles read)`);
+  writeFileSync(`${dir}/candidates.png`, plot(list, [], null, res.reach));
+  console.log(`${venue} · ${officeName}: ${list.length} buildings within ${res.reach} m (${out.source}, ${res.requests} tiles read)`);
   console.log(`files: ${dir}/candidates.png (numbered, north up, pin red), candidates.json`);
   console.log(`the same buildings on the demo: https://montri-th.github.io/governmentoffice/?office=${encodeURIComponent(venue)}`);
 }
 
-// ---------- geometry (local metres round the office) ----------
-function areaM(ring) { let a = 0; const r = ring.map(toM); for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]; return a / 2; }
-function inRing([x, y], ring) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i], [xj, yj] = ring[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-function segDist([px, py], [ax, ay], [bx, by]) {
-  const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
-  const t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0;
-  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
-}
-function edgeDist(p, rings) { let d = Infinity; for (const r of rings) for (let i = 0; i < r.length - 1; i++) d = Math.min(d, segDist(p, r[i], r[i + 1])); return d; }
-/** A point well inside the building (the farthest from its walls on a fine grid), checked against the map's own test. */
-function deepPoint(fp) {
-  const rings = [fp.outer, ...fp.holes].map(r => r.map(toM)), out = rings[0];
-  const xs = out.map(p => p[0]), ys = out.map(p => p[1]);
-  let best = null, bestD = -1;
-  const scan = (x0, x1, y0, y1, step) => {
-    for (let x = x0; x <= x1; x += step) for (let y = y0; y <= y1; y += step) {
-      const p = [x, y];
-      if (!inRing(p, out) || rings.slice(1).some(h => inRing(p, h))) continue;
-      const d = edgeDist(p, rings);
-      if (d > bestD) { bestD = d; best = p; }
-    }
-  };
-  const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys), step = Math.max(0.25, Math.min(w, h) / 24);
-  scan(Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), step);
-  if (best) scan(best[0] - step, best[0] + step, best[1] - step, best[1] + step, step / 6);
-  const pt = best ? toLL(best) : null;
-  if (pt && containsPoint(fp, pt)) return pt;
-  const alt = interiorOf(fp.outer).map(v => +v.toFixed(6));
-  if (!containsPoint(fp, alt)) fail('a building has no point that stays inside it at 6 decimals');
-  return alt;
-}
 function today() { return new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Bangkok'}).format(new Date()); }
 
-// ---------- a PNG without packages: grey = CityMETER buildings, blue = site, orange = boundary, red = the office's point ----------
+// ---------- a PNG without packages: grey = drawn buildings, blue = site, orange = boundary, red = the office's point ----------
 function plot(cands, pickedIds, boundary, reach) {
   const S = 1200, s = S / (2 * reach), img = new Uint8Array(S * S * 3).fill(246);
   const px = p => { const [x, y] = toM(p); return [S / 2 + x * s, S / 2 - y * s]; };
