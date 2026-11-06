@@ -10,7 +10,8 @@
  *    opens without it). Owner 2026-11-02: “ทำให้มันตอบทันเลยได้มั้ย”;
  *  - Street View — only where the view has a point (the office's production point, or a station's reference point,
  *    which is not an entrance: the label says "ใกล้");
- *  - Google Maps — a search by office name + district + province (or the type + place).
+ *  - Google Maps — a search by the office's place name (mapsPlaceName: สำนักงานเทศบาล… · ที่ว่าการอำเภอ… where production
+ *    names the organisation or the area alone) + district + province (or the type + place).
  *
  * Pure: builds labels and https URLs from public names only (no user data, no internal ids). The Google names on the
  * buttons say where the answers come from (owner 2026-11-01: no caveat lines).
@@ -27,6 +28,55 @@ export const streetViewURL = (lat, lon, {heading, pitch} = {}) => (Number.isFini
 
 const clean = s => String(s ?? '').replace(/\s+/g, ' ').trim();
 const join = (...parts) => clean(parts.filter(Boolean).join(' '));
+
+/*
+ * The name Google Maps finds as the office — not the area it serves. Production often names a local government, a
+ * district office or a unit by its organisation or its area alone (เทศบาลนครเชียงใหม่, อำเภอเมืองสมุทรปราการ, เมืองพัทยา,
+ * ตำบลชัยบาดาล), and Google Maps opens that municipality, district or city as a boundary (owner 2026-11-06: “มันควรจะได้
+ * ตรงสำนักงานเทศบาลนครเชียงใหม่ แต่ตอนนี้กลายเป็น ขอบเขตเทศบาลเชียงใหม่ใน google maps”). Measured in Google Maps the same day,
+ * with the district and province after the name: สำนักงานเทศบาลนครเชียงใหม่ · ที่ว่าการอำเภอเมืองสมุทรปราการ · ศาลาว่าการ
+ * เมืองพัทยา · สำนักงานเทศบาลตำบลด่านสำโรง · องค์การบริหารส่วนตำบลบางโปรง open the office; เทศบาลนครเชียงใหม่ ·
+ * อำเภอเมืองสมุทรปราการ · เมืองพัทยา open the boundary (a viewport at the point does not change that).
+ */
+const NAME_NOISE = /[​-‍⁠﻿]/g;
+const nameOf = s => clean(String(s ?? '').normalize('NFC').replace(NAME_NOISE, '').replace(/ํา/g, 'ำ'));
+/** A name that starts as an administrative area does (Google Maps reads it as that area). */
+const AREA_START = /^(?:กิ่ง)?อำเภอ|^เขต|^ตำบล|^แขวง|^จังหวัด|^เทศบาล|^เมือง|^นคร|^กรุงเทพ/;
+/** A name that already says what kind of place it is (an office, a station, a school, a temple …). */
+const OWN_WORD = /^(?:สำนัก|เขต(?:ห้ามล่า|รักษาพันธุ์|อุทยาน|สงวน|สอบสวน|งาน)|ที่ว่าการ|ที่ทำการ|ศาลาว่าการ|ศาลากลาง|สถานี|แขวงทางหลวง|แขวงการทาง|งาน|ศูนย์|กอง|กรม|ศาล(?!า)|องค์การ|องค์กร|สมาคม|สโมสร|มูลนิธิ|โรงเรียน|โรงพยาบาล|วัด|ห้องสมุด|กศน|หน่วย|ที่พัก|ป้อม|ตู้|จุด)/;
+/** Municipalities: the level word of each type (เทศบาลตำบล · เทศบาลเมือง · เทศบาลนคร). */
+const MUNICIPAL = {1030: 'ตำบล', 1040: 'เมือง', 1050: 'นคร'};
+/** What other kinds of place are called before an area name (กศน.ตำบล…, โรงเรียนเทศบาล…, วัดนคร…). */
+const PLACE_WORD = {1080: 'ที่พักสายตรวจ', 2050: 'โรงเรียน', 2110: 'โรงเรียน', 2150: 'โรงเรียน', 2170: 'ศูนย์พัฒนาเด็กเล็ก', 2190: 'กศน.',
+  2200: 'ห้องสมุดประชาชน', 2210: 'พิพิธภัณฑ์', 3010: 'โบราณสถาน', 3020: 'โบราณสถาน', 3030: 'วัด', 3040: 'สำนักสงฆ์'};
+
+/** row: {name, type: {id}} → the name to search for in Google Maps ('' without a name). */
+export function mapsPlaceName(row) {
+  const n = nameOf(row?.name), id = String(row?.type?.id ?? '');
+  if (!n) return '';
+  if (id === '1010') { // ที่ว่าการอำเภอ
+    if (/^ที่ว่าการอำเภอ/.test(n)) return n;
+    const i = n.lastIndexOf('อำเภอ');
+    if (OWN_WORD.test(n) && i < 0) return n;
+    return `ที่ว่าการอำเภอ${i >= 0 ? n.slice(i + 'อำเภอ'.length) : n}`;
+  }
+  if (MUNICIPAL[id]) {
+    // The municipality's own name (production's spelling, เทศบาบ… included), or a city's district: สำนักงานแขวงเม็งราย.
+    if (/^(?:เทศบา|แขวง|เขต)/.test(n) && !OWN_WORD.test(n)) return `สำนักงาน${n}`;
+    if (OWN_WORD.test(n)) return n; // the office's own name, or another organisation's (as production holds it)
+    return `สำนักงานเทศบาล${n.startsWith(MUNICIPAL[id]) ? '' : MUNICIPAL[id]}${n}`;
+  }
+  if (id === '1020') { // อบต.
+    if (/ส่วนตำบล|^อบต|^อง(?:ค์)?การ/.test(n)) return n; // the organisation's name, production's spelling included
+    if (/^เทศบา/.test(n)) return `สำนักงาน${n}`;
+    if (OWN_WORD.test(n)) return n;
+    return `องค์การบริหารส่วน${n.startsWith('ตำบล') ? '' : 'ตำบล'}${n}`;
+  }
+  if (id === '1060' && /^เมืองพัทยา/.test(n)) return `ศาลาว่าการ${n}`;
+  if (id === '1121') return /ดับเพลิง|^สถานี/.test(n) ? n : `สถานีดับเพลิง${n}`;
+  if (PLACE_WORD[id] && AREA_START.test(n) && !OWN_WORD.test(n)) return `${PLACE_WORD[id]}${n}`;
+  return n;
+}
 /**
  * ctx: {kind: 'office'|'building'|'area'|'station'|'type'|'overview', row?, area?: {place, province}, station?, type?,
  *       province?, point?: {lat, lon, role}, rows?}
@@ -40,7 +90,7 @@ export function contextActions(ctx = {}) {
     const what = r.office ? 'เปิดทำการวันและเวลาไหน ติดต่อและให้บริการเรื่องอะไรบ้าง ย้ายที่ตั้งหรือมีจุดบริการใหม่ไหม และเดินทางไปอย่างไร'
       : 'คืออะไร อยู่ตรงไหน และเดินทางไปอย่างไร';
     add('ai', 'ถาม Google AI', googleAskURL(`${join(name, place ? `(${place})` : '')} ${what}`));
-    add('maps', 'Google Maps', mapsSearchURL(join(name, ctx.area?.place, ctx.area?.province)));
+    add('maps', 'Google Maps', mapsSearchURL(join(mapsPlaceName(r) || name, ctx.area?.place, ctx.area?.province)));
   } else if (ctx.kind === 'building') {
     const names = [...new Set((ctx.rows || []).map(r => clean(r.name)).filter(Boolean))].slice(0, 2);
     add('ai', 'ถาม Google AI', googleAskURL(`${join(names.join(' และ '), place)} อยู่ในอาคารหรือบริเวณเดียวกันไหม และรอบ ๆ มีหน่วยงานอะไรอีกบ้าง`));

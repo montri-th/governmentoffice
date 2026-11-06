@@ -424,7 +424,7 @@
   {
    "id": "A17",
    "scenario": "release",
-   "expected": "one cache tag ?v=20261106-r8; one product version 0.4.0; handoff JSON valid",
+   "expected": "one cache tag ?v=20261106-r9; one product version 0.4.0; handoff JSON valid",
    "verificationType": "unit (tests/release.test.js)"
   },
   {

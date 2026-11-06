@@ -8,7 +8,7 @@ import {summarize, productionLink, filterRows, unitFor, hasPoint, stationLink, t
 import {buildChartModel, areaMatrix, typeRanking} from '../js/chart-model.js';
 import {buildBreadcrumb, renderBreadcrumb, breadcrumbText, productionHref} from '../js/breadcrumb.js';
 import {CUES, CUE_PATHS, GROUP_SERIES, cueMarkup, seriesOf} from '../js/cues.js';
-import {contextActions} from '../js/ask.js';
+import {contextActions, mapsPlaceName} from '../js/ask.js';
 
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ');
 const ctxFor = (data, index, {metric = 'count', group = '', type = null, filtered = false} = {}) => ({meta: data.meta, unit: unitFor({metric, groups: data.groups, group, type}), index, groups: data.groups, filtered});
@@ -300,6 +300,60 @@ test('Google actions: public names and points only, https, the question of the v
   assert.deepEqual(contextActions({kind: 'area', area: {place: 'เขตวัฒนา', province: 'กรุงเทพมหานคร'}}).map(a => a.id), ['ai', 'maps']);
   const st = contextActions({kind: 'station', station: {name: 'อโศก', lines: ['สุขุมวิท']}, point: {lat: 13.737, lon: 100.56, role: 'station'}});
   assert.equal(st.at(-1).label, 'Street View ใกล้สถานี');
+});
+
+test('Google Maps searches for the office, never the municipality, district or city it is named after', () => {
+  // Owner 2026-11-06: เทศบาลนครเชียงใหม่ opened the municipality's boundary in Google Maps instead of its office. Measured the
+  // same day: the left column (+ district and province) opens the office, the bare production names opened the boundary.
+  const t = (id, name) => mapsPlaceName({type: {id}, name});
+  assert.equal(t('1050', 'เทศบาลนครเชียงใหม่'), 'สำนักงานเทศบาลนครเชียงใหม่');
+  assert.equal(t('1050', 'แขวงเม็งราย เทศบาลนครเชียงใหม่'), 'สำนักงานแขวงเม็งราย เทศบาลนครเชียงใหม่');
+  assert.equal(t('1050', 'แหลมฉบัง'), 'สำนักงานเทศบาลนครแหลมฉบัง');
+  assert.equal(t('1040', 'เมืองแพรกษาใหม่'), 'สำนักงานเทศบาลเมืองแพรกษาใหม่');
+  assert.equal(t('1040', 'แพรกษาใหม่'), 'สำนักงานเทศบาลเมืองแพรกษาใหม่');
+  assert.equal(t('1040', 'สำนักงานเทศบาลเมืองปากน้ำสมุทรปราการ'), 'สำนักงานเทศบาลเมืองปากน้ำสมุทรปราการ');
+  assert.equal(t('1040', 'แขวงทางหลวงหนองคาย'), 'แขวงทางหลวงหนองคาย', 'another organisation keeps its own name');
+  assert.equal(t('1030', 'เทศบาลตำบลด่านสำโรง'), 'สำนักงานเทศบาลตำบลด่านสำโรง');
+  assert.equal(t('1030', 'ตำบลบางโปรง'), 'สำนักงานเทศบาลตำบลบางโปรง');
+  assert.equal(t('1030', 'เมืองที'), 'สำนักงานเทศบาลตำบลเมืองที', 'the level word is the type’s, never read off the name');
+  assert.equal(t('1030', 'ศาลาลำดวน'), 'สำนักงานเทศบาลตำบลศาลาลำดวน', 'ศาลา… is a place name, not a court');
+  assert.equal(t('1030', 'เทศบาบตำบบหาดเสี้ยว'), 'สำนักงานเทศบาบตำบบหาดเสี้ยว', 'production’s spelling kept, never doubled');
+  assert.equal(t('1020', 'องการบนิหารส่วนตำบลหนองเรือ'), 'องการบนิหารส่วนตำบลหนองเรือ');
+  assert.equal(t('3020', 'เขตห้ามล่าสัตว์ป่าเขาสมโภชน์'), 'เขตห้ามล่าสัตว์ป่าเขาสมโภชน์');
+  assert.equal(t('1080', 'ตำบลกุดโบสถ์'), 'ที่พักสายตรวจตำบลกุดโบสถ์');
+  assert.equal(t('1010', 'อำเภอเมืองสมุทรปราการ'), 'ที่ว่าการอำเภอเมืองสมุทรปราการ');
+  assert.equal(t('1010', 'เมืองจันทบุรี'), 'ที่ว่าการอำเภอเมืองจันทบุรี');
+  assert.equal(t('1010', 'ที่ว่าการอำเภอบางบ่อ'), 'ที่ว่าการอำเภอบางบ่อ');
+  assert.equal(t('1010', 'ที่ว่ากาอำเภอพระประแดง'), 'ที่ว่าการอำเภอพระประแดง');
+  assert.equal(t('1010', 'อําเภอเมืองปทุมธานี'), 'ที่ว่าการอำเภอเมืองปทุมธานี', 'นิคหิต + สระอา reads as สระอำ');
+  assert.equal(t('1020', 'องค์การบริหารส่วนตำบลบางโปรง'), 'องค์การบริหารส่วนตำบลบางโปรง');
+  assert.equal(t('1020', 'องค์​การบริหาร​ส่วนตำบล​บางพลีใหญ่'), 'องค์การบริหารส่วนตำบลบางพลีใหญ่', 'zero-width spaces dropped');
+  assert.equal(t('1020', 'ตำบลชัยบาดาล'), 'องค์การบริหารส่วนตำบลชัยบาดาล');
+  assert.equal(t('1020', 'ราชาเทวะ'), 'องค์การบริหารส่วนตำบลราชาเทวะ');
+  assert.equal(t('1020', 'เทศบาลตำบลแพรกษา'), 'สำนักงานเทศบาลตำบลแพรกษา');
+  assert.equal(t('1060', 'เมืองพัทยา'), 'ศาลาว่าการเมืองพัทยา');
+  assert.equal(t('1060', 'องค์การบริหารส่วนจังหวัดนนทบุรี'), 'องค์การบริหารส่วนจังหวัดนนทบุรี');
+  assert.equal(t('1121', 'เทศบาลเมืองปู่เจ้าสมิงพราย'), 'สถานีดับเพลิงเทศบาลเมืองปู่เจ้าสมิงพราย');
+  assert.equal(t('1121', 'สถานีดับเพลิงดุสิต'), 'สถานีดับเพลิงดุสิต');
+  assert.equal(t('2190', 'ตำบลสามบัณฑิต'), 'กศน.ตำบลสามบัณฑิต');
+  assert.equal(t('2050', 'เทศบาล3วัดชัยมงคล'), 'โรงเรียนเทศบาล3วัดชัยมงคล');
+  assert.equal(t('3030', 'นครสวรรค์'), 'วัดนครสวรรค์');
+  assert.equal(t('3030', 'วัดพระธาตุดอยสุเทพราชวรวิหาร'), 'วัดพระธาตุดอยสุเทพราชวรวิหาร');
+  assert.equal(t('1070', 'สถานีตำรวจภูธรเมืองเชียงใหม่'), 'สถานีตำรวจภูธรเมืองเชียงใหม่');
+  assert.equal(mapsPlaceName({type: {id: '1050'}, name: ''}), '');
+  // The office panel's link: the place name, then the district and the province (the AI question keeps the organisation).
+  const {data} = load();
+  const h = data.rows.find(r => r.id === HATYAI);
+  const acts = contextActions({kind: 'office', row: h, area: {place: 'อำเภอหาดใหญ่', province: 'สงขลา'}});
+  assert.equal(decodeURIComponent(acts.find(a => a.id === 'maps').href), 'https://www.google.com/maps/search/?api=1&query=สำนักงานเทศบาลนครหาดใหญ่ อำเภอหาดใหญ่ สงขลา');
+  assert.ok(decodeURIComponent(acts.find(a => a.id === 'ai').href).includes('เทศบาลนครหาดใหญ่ (อำเภอหาดใหญ่ สงขลา)'));
+  // Every government office and place of the data gets a name; none is left starting as a bare municipality or district.
+  for (const r of loadAll().data.rows) {
+    const q = mapsPlaceName(r);
+    if (!r.name) continue;
+    assert.ok(q, r.id);
+    if (['1010', '1020', '1030', '1040', '1050'].includes(r.type?.id)) assert.ok(!/^(?:เทศบาล|อำเภอ|กิ่งอำเภอ)/.test(q), `${r.id} ${q}`);
+  }
 });
 
 test('filter chips escape user text, name the filters and offer one clear-all', () => {

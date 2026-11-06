@@ -311,7 +311,7 @@
    "overview"
   ],
   "ai": "Google Search with a question written for the view (0.3.3: /search?q=, answered at the top by Google’s AI Overview, AI Mode one tab away; never udm=50, which Google stops at “Continue with this search?” from another site)",
-  "maps": "Google Maps search by public names",
+  "maps": "Google Maps search for the office's place name and its district and province (js/ask.js#mapsPlaceName: สำนักงานเทศบาล… · ที่ว่าการอำเภอ… · ศาลาว่าการเมืองพัทยา · องค์การบริหารส่วนตำบล… · สถานีดับเพลิง… · กศน./โรงเรียน/วัด… where production names the organisation or the area alone; owner 2026-11-06: a bare เทศบาลนครเชียงใหม่ opened the municipality's boundary, not its office); an area or a station: สถานที่ราชการ + the place",
   "streetView": "with a point: on the street in front of the building being looked at, turned to face it (js/office-building.js#streetViewOf → map_action=pano&viewpoint&heading&pitch; owner 2026-11-06 “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”); before the building is known, or with no street within 120 m and the point inside it, the point itself; a station’s reference point “ใกล้สถานี”",
   "dataBoundary": "Google’s answers are Google’s: never copied into the data"
  },
@@ -745,6 +745,6 @@
   "site": "GitHub Pages from main /root",
   "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
   "liveCheck": "npm run verify:live",
-  "cacheTag": "?v=20261106-r8 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+  "cacheTag": "?v=20261106-r9 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
  }
 }
