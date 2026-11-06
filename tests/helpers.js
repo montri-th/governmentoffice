@@ -29,7 +29,7 @@ export function load({frames = []} = {}) {
 }
 
 /**
- * Every group of the dataset: the offices plus the group files the page loads on demand (a separate decode, so the
+ * Every group of the dataset: the offices plus the group files the page loads before its first paint (a separate decode, so the
  * offices-only data of load() is never changed by a test).
  */
 export function loadAll() {

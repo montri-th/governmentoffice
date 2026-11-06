@@ -27,6 +27,11 @@ test('one cache tag on every entry file and every module in the import map', () 
   const expected = Object.fromEntries(modules().sort().map(m => [`./${m}`, `./${m}?v=${tag}`]));
   assert.deepEqual(map, expected, 'every ES module (except the classic launch.js) is mapped to its tagged URL');
   assert.ok(html.indexOf('type="importmap"') < html.indexOf('type="module"'), 'the import map precedes every module script');
+  // Every mapped module is preloaded at once (no import waterfall), after the import map and before the module scripts.
+  const preloads = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(m => m[1]);
+  assert.deepEqual(preloads.sort(), Object.values(map).map(v => v.slice(2)).sort(), 'one modulepreload per mapped module, same tagged URL');
+  const end = html.indexOf('</script>', html.indexOf('type="importmap"'));
+  assert.ok(html.indexOf('rel="modulepreload"') > end && html.lastIndexOf('rel="modulepreload"') < html.indexOf('type="module"'), 'preloads sit after the import map, before the module scripts');
 
   // Every static relative import in js/ resolves to a mapped module.
   for (const m of modules()) {

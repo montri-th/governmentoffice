@@ -67,9 +67,26 @@ Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the 
 
 ## 5. Live
 
-Recorded after the deploy of the release commit in the commit that follows it (GitHub Pages, main / root):
-`npm run handoff:manifest`, `npm run verify:live` (every published file byte-identical, SHA-256) and the walk of the
-live site at desktop and phone width in light and dark.
+GitHub Pages (main / root), release commit `1932f76`:
+
+- `npm run verify:live` (2026-11-06): **246 ok, 0 failed** — every published file of the manifest at `1932f76`
+  byte-identical (SHA-256) on https://montri-th.github.io/governmentoffice/ (`evidence/live-attestation.json`, not
+  committed); the root document serves the `index.html` bytes.
+- Load over the real network (gzip), headless Chromium in the build container with the network throttled: 100 Mbps /
+  20 ms ready in 4.6 s, 20 Mbps / 60 ms (4G) in 6.8 s, 10.1 MB over the wire; the launch card counted the files in
+  (“กำลังโหลดหน่วยงานและสถานที่ 440,005 แห่ง · 1 จาก 3 หมวด” …). In the owner's Chrome the three group files (8.6 MB)
+  arrived in 2.4 s, but the ES modules took until 5.2 s to load one import after another — so the follow-up commit
+  preloads every module of the import map at once (`<link rel="modulepreload">`, `tests/release.test.js`): at 150 ms
+  latency the page's modules were ready in 1.5 s instead of 2.6 s.
+- Walk in the owner's Chrome with the real basemap, terrain and building tiles (window 1400 × 779; the phone views in
+  same-origin frames of the live site at 390 × 844): desktop light first screen — “17% ของหน่วยงานและสถานที่ใน
+  นครราชสีมา อยู่ใน 3 อำเภอนี้”, 3,466 จาก 20,003 แห่ง, the three districts filled with their symbols, every other point a
+  quiet dot over OpenFreeMap (440,005 rows, heap about 390 MB); `?office=280dc7ddb7` (เทศบาลนครหาดใหญ่) in the 3D
+  two-point view of the CityMETER Building V4 building nearest the pin, terrain chips from the DEM, the nearest
+  services; `?group=offices` — “22% ของหน่วยงานรัฐในนครราชสีมา อยู่ใน 3 อำเภอนี้”, 165 จาก 744 แห่ง, the switch
+  “หน่วยงาน | บุคลากร”; phone light `?area=3001` with the sheet open (อันดับ 28 จาก 925 · 1,185 แห่ง · 5,031 บุคลากร);
+  phone dark first screen with the dock (the legend's word on one line); phone dark `?office=280dc7ddb7` in 3D. Launch
+  state `ready`, map loaded, no map failure, no console error. The owner's saved theme was put back after the frames.
 
 ## 6. Not verified
 

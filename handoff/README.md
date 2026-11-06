@@ -17,7 +17,7 @@
 2. อ่านแท็บด้วย `scripts/export-sheet-tabs.js` ในเบราว์เซอร์ที่เปิดชีตได้ — `05_PRODUCTION_ROWS` แบบ compact แล้ว `scripts/join-compact-payload.py` แท็บอื่นและลิงก์ของ 06 ด้วย `scripts/decode-sheet-payload.py`
 3. `python3 -I scripts/build-data.py …` ตาม `DATA_METHOD.md` §13 (หยุดเองถ้ายอดไม่ตรง production)
 4. `npm test` และ `npm run check:lds -- --lds <base> --li <profile>`
-5. ขยับ `?v=YYYYMMDD-rN` ใน `index.html` + `package.json` + `design-intent.json` + handoff JSON
+5. ขยับ `?v=YYYYMMDD-rN` ใน `index.html` (import map และ modulepreload ทุกโมดูล) + `package.json` + `design-intent.json` + handoff JSON
 6. push `main` → GitHub Pages → `npm run handoff:manifest` → `npm run verify:live`
 7. เดินเว็บจริงที่ 1440 และ 390 px ทั้ง light และ dark ก่อนบอกว่าเสร็จ
 8. อัปเดตแถว `research.TH.government_office` ใน CityMETER Dataset Registry (คอลัมน์ demo และ Changes) ในชีตเดิม
