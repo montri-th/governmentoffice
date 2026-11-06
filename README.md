@@ -48,6 +48,7 @@ npm test    # unit tests บนข้อมูลจริง (node --test)
 - `data/area-index.json`, `data/frames/{CODE}.json`, `data/provinces.geojson` — เขต/อำเภอและจังหวัดของ CityMETER production — `scripts/build-boundaries.py`
 - `data/boundary-receipts.json` — ใบรับของทุก response จาก production base info — `scripts/build-receipts.py`
 - `data/building-units/` — แหล่งอาคารราย อปท./เขต จาก CityMETER · Hotel — `scripts/adapt-building-units.py`
+- ไซต์ของหน่วยงาน (อาคารทุกหลังในบริเวณเดียวกัน) เป็นงานวิจัย ยังไม่ขึ้นหน้าเว็บ: `docs/SITES.md` · อาคารรอบหน่วยงานจาก `scripts/site-candidates.mjs` (ผลอยู่ใน `sites/` ไม่ commit)
 - วิธีทั้งหมด ข้อจำกัด และงานวิจัยที่ต้องตามต่อ: `DATA_METHOD.md` · กลยุทธ์ผลิตภัณฑ์: `PRODUCT_STATEMENT.md` · สำหรับนักพัฒนา: `handoff/START_HERE.md` · สำหรับ agent: `llms.txt`
 
 ## ตรวจ

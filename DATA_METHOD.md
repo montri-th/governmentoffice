@@ -157,7 +157,9 @@ camera follow the Hotel 0.3.x contracts. The building the camera turns to for an
 `js/office-building.js` — an OpenStreetMap point of interest named as the office, the pin, the distance, the side of
 the street, the type's footprint floor and the setback — never the building holding the pin just because it holds it;
 Street View stands on the street in front of that building, facing it. Method, causes, accuracy and the audit of every
-government office in a CityMETER unit: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`.
+government office in a CityMETER unit: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`. Office sites —
+the other buildings of an office's compound, grouped from OpenStreetMap area frames — are research only and not on the
+page (`docs/SITES.md`; building points from `scripts/site-candidates.mjs`).
 
 ## 11. Not published
 
