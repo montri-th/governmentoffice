@@ -41,6 +41,7 @@ import {parseVectorTile, tileToLonLat, lonLatToTileUnits, tilesForBBox, metresPe
 import {clipRingToBox, offsetRing, roundRing, isClockwise, ringsIntersect, cleanRing, signedArea, pointInRing} from './geometry.js';
 import {GEOJSON_MAXZOOM} from './map-layers.js';
 import {interiorOf} from './building-join.js';
+import {STREET_CLASSES} from './office-building.js';
 
 export const CITY_LAYER = 'city-massing';
 export const FOCUS_SOURCE = 'focus-massing';
@@ -407,6 +408,46 @@ function tileXY([lon, lat], z) {
   return [((lon + 180) / 360) * n, ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n];
 }
 
+/** Streets and named points of interest are kept only round a small focus (an office, a building), up to this wide. */
+export const NEARBY_MAX_M = 3000;
+/** … and this far outside it (a street in front of a building at the edge of the square). */
+export const NEARBY_MARGIN_M = 150;
+const NO_NEARBY = Object.freeze({pois: Object.freeze([]), roads: Object.freeze([])});
+/**
+ * Pure: the named points of interest (OpenMapTiles `poi`) and the streets (`transportation`, the classes Street View
+ * drives, js/office-building.js#STREET_CLASSES) of the focus tiles round a small focus — the names that confirm an
+ * office's building and the streets Street View stands on to face it (js/office-building.js). `layers[i]` is
+ * {poi, transportation} of tiles[i] (null when the tile failed). → {pois: [{lon, lat, name, cls, sub}], roads:
+ * [{cls, brunnel, coords: [[lon, lat]…]}]}; empty for a focus wider than NEARBY_MAX_M.
+ */
+export function streetsAndNames(tiles, layers, regions) {
+  if (!regions?.length || !tiles?.length) return NO_NEARBY;
+  const [w, s, e, n] = bboxOfRings(regions);
+  const kx = 111320 * Math.cos((((s + n) / 2) * Math.PI) / 180), ky = 110574;
+  if ((e - w) * kx > NEARBY_MAX_M || (n - s) * ky > NEARBY_MAX_M) return NO_NEARBY;
+  const W = w - NEARBY_MARGIN_M / kx, E = e + NEARBY_MARGIN_M / kx, S = s - NEARBY_MARGIN_M / ky, N = n + NEARBY_MARGIN_M / ky;
+  const inBox = ([x, y]) => x >= W && x <= E && y >= S && y <= N;
+  const pois = [], roads = [];
+  tiles.forEach((tile, i) => {
+    const poi = layers[i]?.poi, streets = layers[i]?.transportation;
+    for (const f of poi?.features || []) {
+      if (f.type !== 1 || !f.properties.name) continue;
+      for (const ring of f.rings()) for (const [px, py] of ring) {
+        const p = tileToLonLat(px, py, tile, poi.extent || 4096);
+        if (inBox(p)) pois.push({lon: p[0], lat: p[1], name: String(f.properties.name), cls: String(f.properties.class || ''), sub: String(f.properties.subclass || '')});
+      }
+    }
+    for (const f of streets?.features || []) {
+      if (f.type !== 2 || !STREET_CLASSES.has(f.properties.class)) continue;
+      for (const line of f.rings()) {
+        const coords = line.map(([px, py]) => tileToLonLat(px, py, tile, streets.extent || 4096));
+        if (coords.length > 1 && coords.some(inBox)) roads.push({cls: f.properties.class, brunnel: String(f.properties.brunnel || ''), coords});
+      }
+    }
+  });
+  return {pois, roads};
+}
+
 /**
  * Tiles needed for a set of lon/lat regions (deduplicated, bounded by `max`). Over the bound, the tiles
  * nearest `center` (the camera, [lon, lat]) are kept, so the detail follows the part of a large เขต/อำเภอ
@@ -552,14 +593,16 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
     if (cmCache.size > 64) cmCache.delete(cmCache.keys().next().value);
     return task;
   }
+  /** One basemap tile: its `building` layer, and its `poi` and `transportation` layers for the building of an office
+   *  (js/office-building.js: names of points of interest, the streets Street View stands on). */
   async function loadTile(tile) {
     const key = `${tile.z}/${tile.x}/${tile.y}`;
     if (cache.has(key)) return cache.get(key);
     const task = (async () => {
       const r = await fetchImpl(tileUrl(tile));
       if (!r.ok) throw new Error(`tile ${key} ${r.status}`);
-      const parsed = parseVectorTile(await r.arrayBuffer());
-      return parsed.layers.building || {extent: 4096, features: []};
+      const {layers} = parseVectorTile(await r.arrayBuffer());
+      return {building: layers.building || {extent: 4096, features: []}, poi: layers.poi || null, transportation: layers.transportation || null};
     })();
     cache.set(key, task);
     task.catch(() => cache.delete(key));
@@ -599,7 +642,7 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
     lastKey = key; lastBucket = bucket; lastTruncated = truncated;
     if (!enabled || !regions.length || !ready) {
       map.getSource(FOCUS_SOURCE)?.setData({type: 'FeatureCollection', features: []}); setHidden([]); setContext([]); setCredit(false);
-      currentFeatures = []; setFootprints([]); setOccluders([]); setFocusMinZoom(CITY_MIN_ZOOM);
+      currentFeatures = []; nearby = NO_NEARBY; setFootprints([]); setOccluders([]); setFocusMinZoom(CITY_MIN_ZOOM);
       const empty = {features: 0, tiles: 0, ready};
       if (typeof onResult === 'function') { try { onResult(empty); } catch (e) { console.warn('Massing onResult', e); } }
       return empty;
@@ -631,7 +674,9 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
     };
     const features = [], footprints = [], hidden = new Set(), context = [], partOutlines = [];
     let kept = 0, dropped = 0, replaced = 0;
-    layers.forEach((layer, i) => {
+    const near = streetsAndNames(tiles, layers, regions);
+    layers.forEach((tileLayers, i) => {
+      const layer = tileLayers?.building;
       if (!layer) return;
       const shaped = shapeTile(tiles[i], layer, {regions, hosts, radiusM, offsetM, zones: zonesOfTile(tiles[i])});
       features.push(...shaped.features); footprints.push(...shaped.footprints); context.push(...shaped.context); partOutlines.push(...shaped.partOutlines);
@@ -648,6 +693,7 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
     });
     // Ids are stable per tile building (focusFeatureId, cmFeatureId); the OSM id stays in properties.
     currentFeatures = features;
+    nearby = near;
     setFootprints(footprints);
     map.getSource(FOCUS_SOURCE)?.setData({type: 'FeatureCollection', features});
     setHidden(hidden);
@@ -671,7 +717,11 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
   }
 
   /* ---------- footprints for the spatial join, venue highlight, hit test ---------- */
-  let footprintList = [], footprintById = new Map(), version = 0;
+  let footprintList = [], footprintById = new Map(), version = 0, nearby = NO_NEARBY;
+  /** Named points of interest round a small focus (an office, a building): [{lon, lat, name, cls, sub}]. */
+  function pois() { return nearby.pois; }
+  /** Streets round a small focus: [{cls, brunnel, coords: [[lon, lat]…]}]. */
+  function roads() { return nearby.roads; }
   function setFootprints(list) {
     footprintList = Object.freeze(list.map(b => Object.freeze({...b, bbox: bboxOfRings([b.outer])})));
     footprintById = new Map(footprintList.map(b => [b.id, b]));
@@ -854,9 +904,9 @@ export function installMassing(map, {sourceId = 'openmaptiles', beforeId, colors
     try { map.removeFeatureState({source: sourceId, sourceLayer: 'building'}); } catch {}
     for (const id of [VENUE_LAYER, OCCLUDER_LAYER, FOCUS_LAYER, CM_CREDIT_LAYER, CONTEXT_LAYER, CITY_LAYER]) if (map.getLayer(id)) map.removeLayer(id);
     for (const id of [FOCUS_SOURCE, CM_CREDIT_SOURCE, CONTEXT_SOURCE]) if (map.getSource(id)) map.removeSource(id);
-    footprintList = []; footprintById = new Map(); contextFeatures = [];
+    footprintList = []; footprintById = new Map(); contextFeatures = []; nearby = NO_NEARBY;
   }
-  return {update, retheme, setScene, setAnchors, updateFade, dispose, buildings, setHighlight, hitTest, featuresOf, fitPointsOf, obstaclesNear,
+  return {update, retheme, setScene, setAnchors, updateFade, dispose, buildings, pois, roads, setHighlight, hitTest, featuresOf, fitPointsOf, obstaclesNear,
     layerIds: {city: CITY_LAYER, context: CONTEXT_LAYER, focus: FOCUS_LAYER, occluder: OCCLUDER_LAYER, venue: VENUE_LAYER, credit: CM_CREDIT_LAYER},
     get occluders() { return occluderIds.slice(); }, get highlighted() { return highlightIds.slice(); }, get faded() { return stated.size; }, get version() { return version; },
     get hidden() { return hiddenIds.slice(); }, get context() { return contextFeatures.length; }, get credited() { return credited; }};

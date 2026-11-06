@@ -1,6 +1,6 @@
 {
   "name": "citymeter-governmentoffice",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "CityMETER · Government Office — district-first 3D map of government offices and the personnel production records across Thailand, with the nearest public services round a site, recent moves and openings, and rail context from the same registry",

@@ -1,15 +1,15 @@
-# CityMETER Government Office 0.2.0 — verification
+# CityMETER Government Office 0.3.0 — verification
 
-Release 0.2.0 (cache tag `20261106-r2`), built 2026-11-06 from the research sheet “CityMETER Government Office
-Thailand — รายชื่อรอยืนยัน 2026-11-05” as it stood on 2026-11-06 (read cell by cell the same day). 0.2.0 answers the
-owner's request of 2026-11-06 (“ทำไมมีแค่ 19,721 แห่งไม่ใช่สี่แสนครับ งง อยากได้ทั้ง สี่แสนจุดจะได้มั้ย”): every production
-point is a row and the page reads every group by default, so its totals equal production's. The code base is CityMETER ·
-Hotel 0.3.6 (montri-th/hotel @177e592f) through CityMETER · School 0.1.0; the contracts they share were verified there
-(map engine, building view, terrain, guards) and are carried unchanged — this record covers what Government Office
-changes: the data, the measure, the scope of every group, the panels (nearest services, offices round an office, moves
-and openings), the labels, the legend, the filters, the performance of 440,005 rows and the publication.
+Release 0.3.0 (cache tag `20261106-r3`), built 2026-11-06. 0.3.0 answers the owner's requests of 2026-11-06 on the
+Juvenile and Family Court of Ubon Ratchathani (“ทำไมจุดในภาพถึงเลือกอาคารผิด … อยากให้พี่หาเคสที่ spatial join ผิดให้เจอว่า
+มีรายการไหนบ้าง มีสาเหตุกี่แบบ แต่ละแบบควรแก้อย่างไรถึงจะดีที่สุด แล้วลงมือปรับแก้ให้เรียบร้อยทั้งหมด”, “streetview ถ้าเลือกแล้ว
+ต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the building the camera turns to for an office (`js/office-building.js`,
+`docs/BUILDING_CHOICE.md`) and Street View facing it. The data files are 0.2.0's byte for byte, so §1 is 0.2.0's build
+record; 0.2.0 itself answered “ทำไมมีแค่ 19,721 แห่งไม่ใช่สี่แสนครับ งง อยากได้ทั้ง สี่แสนจุดจะได้มั้ย” (every production point a
+row, every group by default). The code base is CityMETER · Hotel 0.3.6 (montri-th/hotel @177e592f) through CityMETER ·
+School 0.1.0; the contracts they share were verified there and are carried unchanged except the building of an office.
 
-## 1. Data build — every reconciliation passes
+## 1. Data build (0.2.0, unchanged) — every reconciliation passes
 
 `python3 -I scripts/build-data.py …` (DATA_METHOD.md §13) stops on any failure; this build passed all of them:
 
@@ -26,7 +26,7 @@ and openings), the labels, the legend, the filters, the performance of 440,005 r
 - 97 events of `06_RECENT_PROD_GAPS` with dates and public https announcements; 18 linked to the production row they
   replace; map links and coordinate sources dropped. No open problem (`meta.problems` empty).
 
-## 2. Unit tests on the real data — 130 pass, 0 fail
+## 2. Unit tests on the real data — 142 pass, 0 fail
 
 `npm test` (Node 22): data contract (one row per point, the default scope = every group, `offices`, the 0.1.0 `all`,
 group files by bytes and SHA-256, repeated points and personnel once, personnel rules, types, membership, points,
@@ -35,16 +35,41 @@ and the filters · district and province models (EVID-05, a district of places o
 every panel view in both scopes (one provenance line, no caveat, no “0 คน”, places never “—”) · nearest services ·
 offices round an office · charts (every group a column under the count, the government offices only under personnel) ·
 breadcrumb · categorical cues · labels and pins · scales · icon fonts · camera, massing, building join and units, x-ray,
-MapLibre guards (carried from Hotel) · release (one cache tag, one version, schema-valid handoff JSON, hygiene).
+MapLibre guards (carried from Hotel) · the building of an office (0.3.0, `tests/office-building.test.js`: the court case,
+a pin in a building of the type's size, a police box, a pin in the open, the street side and the setback, named points of
+interest and the kinds that can lend a name, a stray pin and the office's own name, grouping, Thai names, Street View on
+the street in front facing the building, the link's heading and pitch) · release (one cache tag, one version,
+schema-valid handoff JSON, hygiene).
 
-## 3. LDS and Location Intelligence parity
+## 3. The building of an office (0.3.0)
+
+- Audit (`scripts/audit-building-choice.mjs`): CityMETER Building V4 read at z16 round every government office whose
+  150 m square meets a CityMETER unit — 12,736 offices, 20,658 tile requests (101 MB) to the production tile API at 4 at
+  a time; 8,555 points (67 %) fall in no building, 657 have nothing drawn within 150 m, 186 no building of half their
+  type's footprint floor; without names and streets 0.3.0 changes the building of 2,691 (202 whose point fell in another
+  building, 2,489 whose point fell in none; 819 of these are police boxes, now the nearest structure).
+- Against OpenStreetMap (Overpass API 2026-11-06, in the owner's browser): 1,547 government offices named within 1 km
+  of their points; 199 (13 %) points more than 150 m from the named place; 1,104 named buildings drawn within 150 m
+  (946 over V4, 158 over OpenStreetMap buildings). 0.2.0 picked the named building for 746 (68 %); 0.3.0 without the
+  names for 791 (72 %) — points in a building 373 → 380 of 467, points in none 373 → 411 of 637. With the names the
+  named building wins: 157 of 160 sampled named offices have the name in the OpenFreeMap tiles within 150 m.
+- The court (`?office=b86ab4e816`): 0.2.0 turned to the 103 m² building holding the point; 0.3.0, on the same V4 tile
+  and without names, turns to the 1,413 m² court 44.5 m away (`why: size`); OpenFreeMap names it 69 m from the point.
+- `handoff/building-choice-audit.json`: 3,909 offices with their cause, their OpenStreetMap verdict (358
+  `named_elsewhere`, 199 `pin_far`) and both buildings.
+
+## 4. LDS and Location Intelligence parity
 
 `assets/theme.css` is byte-identical to CityMETER · Hotel 0.3.6 and School 0.1.0 (SHA-256 867c64b2…), and every HEX of
 `js/scales.js` and `js/cues.js` is the same as School's (only labels, defaults and the group → series binding changed),
 so the Hotel parity run (124 checks against the LDS base file and the Location Intelligence Profile) applies unchanged.
 The quiet context dots now read the hollow flag (`h`), so a place is a filled grey dot like its focus symbol.
 
-## 4. Rendered QA and performance (build container)
+## 5. Rendered QA and performance (build container)
+
+0.3.0: `?office=b86ab4e816` loads with the new module, no console error; before a building is known the office's
+Street View opens at the point, as before. The building choice needs the basemap tiles (names, streets), which the
+build container cannot reach: it is verified in the owner's Chrome on the live site (§6). The 0.2.0 record:
 
 Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the DEM were unreachable in the container
 (no basemap, no OSM buildings, no terrain), the data layers real, files served uncompressed from localhost.
@@ -65,7 +90,11 @@ Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the 
   personnel word under the personnel measure (now always what is counted); places read “—” in the personnel bars (now
   only the government-office groups are personnel bars and matrix columns).
 
-## 5. Live
+## 6. Live
+
+0.3.0: recorded after publication (the commit after the release).
+
+0.2.0 —
 
 GitHub Pages (main / root), release commit `1932f76`:
 
@@ -88,8 +117,10 @@ GitHub Pages (main / root), release commit `1932f76`:
   phone dark first screen with the dock (the legend's word on one line); phone dark `?office=280dc7ddb7` in 3D. Launch
   state `ready`, map loaded, no map failure, no console error. The owner's saved theme was put back after the frames.
 
-## 6. Not verified
+## 7. Not verified
 
 - CVD simulation, native mobile devices, screen readers beyond the accessible names and roles in the markup.
 - Memory and load time on a low-end phone (about 9 MB of data over the wire, gzip).
 - Whether each office is open at its production point today (a research-team task, PRODUCT_STATEMENT §7).
+- The building of the offices OpenStreetMap does not name: 0.3.0's choice there is measured only on the named ones;
+  places (education, religion, community) keep the 0.2.0 tie-break, with names and the street side added.

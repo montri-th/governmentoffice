@@ -18,8 +18,12 @@
 const enc = encodeURIComponent;
 export const googleAskURL = q => `https://www.google.com/search?q=${enc(q)}`;
 export const mapsSearchURL = q => `https://www.google.com/maps/search/?api=1&query=${enc(q)}`;
-export const streetViewURL = (lat, lon) => (Number.isFinite(lat) && Number.isFinite(lon)
-  ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : '');
+/**
+ * Street View at a viewpoint; with `heading` (and `pitch`) the panorama opens turned that way — the building the view
+ * looks at (js/office-building.js#streetViewOf, owner 2026-11-06: “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”).
+ */
+export const streetViewURL = (lat, lon, {heading, pitch} = {}) => (Number.isFinite(lat) && Number.isFinite(lon)
+  ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}${Number.isFinite(heading) ? `&heading=${Math.round(heading)}${Number.isFinite(pitch) ? `&pitch=${Math.round(pitch)}` : ''}` : ''}` : '');
 
 const clean = s => String(s ?? '').replace(/\s+/g, ' ').trim();
 const join = (...parts) => clean(parts.filter(Boolean).join(' '));
@@ -55,7 +59,8 @@ export function contextActions(ctx = {}) {
   }
   const p = ctx.point;
   if (p && Number.isFinite(p.lat) && Number.isFinite(p.lon)) {
-    add('streetview', p.role === 'station' ? 'Street View ใกล้สถานี' : 'Street View', streetViewURL(p.lat, p.lon));
+    add('streetview', p.role === 'station' ? 'Street View ใกล้สถานี' : 'Street View', streetViewURL(p.lat, p.lon, p),
+      Number.isFinite(p.heading) ? 'หันหน้าเข้าหาอาคารที่กำลังดูบนแผนที่' : '');
   }
   return out;
 }

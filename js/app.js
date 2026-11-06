@@ -63,7 +63,8 @@ import {createFrameStore, provinceLocator} from './frames.js';
 import {buildOverview, buildAreaProfile, buildOfficeDetail, buildBuildingProfile, buildTypeProfile, buildStationProfile, stationsOf, listOrder, STATION_RADIUS_M} from './profile-model.js';
 import {renderOverview, renderArea, renderBuilding, renderOffice, renderStation, renderTypeCard, renderFilterChips, terrainChipsHTML, subLine, esc, num, pct, words, meters, staffText} from './panel.js';
 import {installStationLayer} from './stations.js';
-import {joinBuildings, nearestBuilding} from './building-join.js';
+import {joinBuildings} from './building-join.js';
+import {chooseBuilding, streetViewOf, normaliseName} from './office-building.js';
 import {buildMapStyle, basemapPalette, TILEJSON_URL, MASSING_BEFORE, VENUE_XRAY_BEFORE} from './map-style.js';
 import {installMassing, outerRings} from './massing.js';
 import {createBuildingUnitStore, cmTileUrl, CM_ATTRIBUTION} from './building-units.js';
@@ -389,6 +390,9 @@ function explicitInsight() {
   return {...state.insight, areas, areaIds: areas.map(a => a.id), count: state.rows.length, value: areas.reduce((s, a) => s + a.value, 0)};
 }
 
+/** A panel view with the Street View facing its building (streetViewTarget), when one is known. */
+const withView = d => (d ? {...d, view: streetViewTarget()} : d);
+
 function renderPanel(summary = summarize(state.rows)) {
   const view = $('panel-view');
   const {mode, id} = state.panel;
@@ -397,9 +401,9 @@ function renderPanel(summary = summarize(state.rows)) {
   let html = '';
   if (mode === 'area') html = renderArea(buildAreaProfile(state.scopeRows, id, state.index, groups, {metric, events: eventsShown() ? state.data.events : []}), countClassOf, ctx);
   else if (mode === 'station') html = renderStation(state.stationProfile, ctx);
-  else if (mode === 'building') html = renderBuilding(buildBuildingProfile(currentBuilding(), state.index, groups), ctx);
-  else if (mode === 'office') html = renderOffice(buildOfficeDetail(rowById(id), {scopeRows: state.scopeRows, allRows: state.data.rows, rowById, index: state.index, groups,
-    building: officeBuilding(id)}), ctx);
+  else if (mode === 'building') html = renderBuilding(withView(buildBuildingProfile(currentBuilding(), state.index, groups)), ctx);
+  else if (mode === 'office') html = renderOffice(withView(buildOfficeDetail(rowById(id), {scopeRows: state.scopeRows, allRows: state.data.rows, rowById, index: state.index, groups,
+    building: officeBuilding(id)})), ctx);
   state.renderedSig = panelSpatialSig();
   if (!html) {
     const f = values();
@@ -641,7 +645,10 @@ function officeBuilding(id) {
 /** What the open panel shows from the join — re-render only when this changes. */
 function panelSpatialSig() {
   const {mode, id} = state.panel;
-  if (mode === 'office') { const b = officeBuilding(id); return b ? `${b.key}|${b.others}` : ''; }
+  const sv = mode === 'office' || mode === 'building' ? streetViewTarget() : null;
+  const view = sv ? `${sv.lat.toFixed(5)},${sv.lon.toFixed(5)},${sv.heading},${sv.pitch}` : '';
+  if (mode === 'office') { const b = officeBuilding(id); return `${b ? `${b.key}|${b.others}` : ''}|${view}`; }
+  if (mode === 'building') return view;
   return '';
 }
 
@@ -651,26 +658,46 @@ function panelSpatialSig() {
  * once for that office when nothing is drawn within the first reach.
  */
 const OFFICE_REACH_M = 300, OFFICE_REACH_FAR_M = 800;
+/** The pin joins the frame of a building it does not fall in up to this far from it (focusShape). */
+const FRAME_PIN_M = 200;
 /** Refits of one frame: the building may arrive in steps (the nearest drawn, then the one holding the pin, a wider
  *  reach) and the ground may move once when its DEM tile arrives; never after the user has moved the map. */
 const MAX_REFITS = 3;
 const officeReach = id => (state.officeReach?.id === id ? state.officeReach.m : OFFICE_REACH_M);
 
-/** The drawn building nearest a pin that falls in none (js/building-join.js#nearestBuilding), per join and pieces. */
-function nearestOf(r) {
-  const pieces = state.massing?.buildings() || [], join = state.join, key = `${r.id}|${officeReach(r.id)}`;
-  if (nearestOf.key !== key || nearestOf.join !== join || nearestOf.pieces !== pieces) {
-    Object.assign(nearestOf, {key, join, pieces});
-    nearestOf.value = join ? nearestBuilding(pieces, [r.longitude, r.latitude], {keyOfPiece: join.keyOfPiece, maxM: officeReach(r.id)}) : null;
+/** Government-office names no other government office carries (normalised; js/office-building.js#namedPoi reaches far
+ *  for these only). Built once, on the first office opened. */
+function uniqueOfficeName(name) {
+  if (!uniqueOfficeName.set) {
+    const seen = new Map();
+    for (const r of state.data.rows) if (r.office) { const n = normaliseName(r.name); seen.set(n, (seen.get(n) || 0) + 1); }
+    uniqueOfficeName.set = new Set([...seen].filter(([, n]) => n === 1).map(([k]) => k));
   }
-  return nearestOf.value;
+  return uniqueOfficeName.set.has(normaliseName(name));
 }
 
 /**
- * The building being looked at: the open building; else the building the open office's point falls in, else the drawn
- * building nearest its pin (`near`: the camera's building, named “อาคารใกล้หมุด”, never a join).
- * {id, key, refs, anchor: [lon, lat], near} — key/refs are null/[] while no building is known (tiles still loading, or
- * nothing drawn within the reach); null without a point.
+ * The drawn building the camera turns to for an office (js/office-building.js#chooseBuilding, release 0.3.0): its
+ * named point of interest, the building the pin falls in, its type's size, its side of the street — per join, pieces,
+ * points of interest and streets of the focus tiles.
+ */
+function choiceOf(r) {
+  const m = state.massing, pieces = m?.buildings() || [], pois = m?.pois?.() || [], roads = m?.roads?.() || [], join = state.join;
+  const key = `${r.id}|${officeReach(r.id)}`;
+  if (choiceOf.key !== key || choiceOf.join !== join || choiceOf.pieces !== pieces || choiceOf.pois !== pois || choiceOf.roads !== roads) {
+    Object.assign(choiceOf, {key, join, pieces, pois, roads});
+    const office = {longitude: r.longitude, latitude: r.latitude, typeId: r.type?.id ?? '', name: r.name, uniqueName: Boolean(r.office) && uniqueOfficeName(r.name)};
+    choiceOf.value = join ? chooseBuilding(pieces, office, {keyOfPiece: join.keyOfPiece, pois, roads, maxM: officeReach(r.id)}) : null;
+  }
+  return choiceOf.value;
+}
+
+/**
+ * The building being looked at: the open building; else the building of the open office (choiceOf): `near` when the
+ * pin does not fall in it (“อาคารใกล้หมุด”), `why` 'name' when its name on the map decided it (“อาคารตามชื่อบนแผนที่”) —
+ * a camera choice, never a join.
+ * {id, key, refs, anchor: [lon, lat], near, why, poi, distanceM} — key/refs are null/[] while no building is known
+ * (tiles still loading, or nothing drawn within the reach); null without a point.
  */
 function focusTarget() {
   const {mode, id} = state.panel, j = state.join;
@@ -679,16 +706,34 @@ function focusTarget() {
     const b = state.buildingSel;
     if (!b) return null;
     const [w, s, e, n] = b.footprint.bbox;
-    return {id: `building:${b.key}`, ...of(b.key), anchor: [(w + e) / 2, (s + n) / 2], near: false};
+    return {id: `building:${b.key}`, ...of(b.key), anchor: [(w + e) / 2, (s + n) / 2], near: false, why: '', poi: null, distanceM: null};
   }
   if (mode === 'office') {
     const r = rowById(id);
     if (!hasPoint(r)) return null;
-    const inside = j?.byRow.get(r.id) || null;
-    const near = inside ? null : nearestOf(r)?.key || null;
-    return {id: `office:${r.id}`, ...of(inside || near), anchor: [r.longitude, r.latitude], near: Boolean(near)};
+    const pick = choiceOf(r);
+    return {id: `office:${r.id}`, ...of(pick?.key), anchor: [r.longitude, r.latitude], near: Boolean(pick && !pick.inside), why: pick?.why || '',
+      poi: pick?.poi || null, distanceM: pick?.distanceM ?? null};
   }
   return null;
+}
+
+/**
+ * Street View facing the building being looked at (js/office-building.js#streetViewOf, owner 2026-11-06: “streetview
+ * ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): on the street in front of it, turned to it; null while no building is known.
+ */
+function streetViewTarget(target = focusTarget()) {
+  if (!target?.refs?.length) return null;
+  const pieces = state.massing?.buildings() || [], roads = state.massing?.roads?.() || [];
+  const key = `${target.id}|${target.refs.join(',')}|${state.massing?.version ?? 0}`;
+  if (streetViewTarget.key !== key || streetViewTarget.roads !== roads) {
+    const want = new Set(target.refs), own = pieces.filter(p => want.has(p.id));
+    const drawn = own.filter(p => !p.outline);
+    const rings = (drawn.length ? drawn : own).map(p => p.outer);
+    const height = Math.max(0, ...own.map(p => Number(p.height) || 0));
+    Object.assign(streetViewTarget, {key, roads, value: streetViewOf(rings, height, state.panel.mode === 'office' ? target.anchor : null, roads)});
+  }
+  return streetViewTarget.value;
 }
 
 /** Focus buildings drawn in the data colour: the building being looked at (every piece of it). */
@@ -716,7 +761,8 @@ function focusShape(target = focusTarget()) {
   });
   if (!points.length) points = rings.flatMap(({ring, height}) => ring.flatMap(([lng, lat]) => [[lng, lat, 0], [lng, lat, height]]));
   // The building nearest the pin is framed with the pin, so the office's symbol stays in view beside it.
-  if (points.length && target?.near) points = [...points, terrain ? [target.anchor[0], target.anchor[1], 0, pinGround] : [target.anchor[0], target.anchor[1], 0]];
+  // A building chosen by its name far from a stray pin (> FRAME_PIN_M) is framed alone: the pin would shrink it to a dot.
+  if (points.length && target?.near && !(target.distanceM > FRAME_PIN_M)) points = [...points, terrain ? [target.anchor[0], target.anchor[1], 0, pinGround] : [target.anchor[0], target.anchor[1], 0]];
   if (!points.length && target) {
     // Not known yet: a 90 m box round the point (12 m tall), framed the same way.
     const [lon, lat] = target.anchor, dLat = 45 / 110574, dLng = 45 / (111320 * Math.cos((lat * Math.PI) / 180));
@@ -879,7 +925,8 @@ function applyJoin() {
   state.blueBuildings = n > 0;
   document.querySelector('.map-panel')?.classList.toggle('has-open-building', state.blueBuildings);
   const label = $('legend-building-label');
-  if (label) label.textContent = currentBuilding() ? 'อาคารที่เปิด' : focusTarget()?.near ? 'อาคารใกล้หมุด' : 'อาคารที่หมุดตก';
+  const t = focusTarget();
+  if (label) label.textContent = currentBuilding() ? 'อาคารที่เปิด' : t?.why === 'name' ? 'อาคารตามชื่อบนแผนที่' : t?.near ? 'อาคารใกล้หมุด' : 'อาคารที่หมุดตก';
   if (panelSpatialSig() !== state.renderedSig) renderPanel();
   syncFocusBuilding();
   refitOnNewBuilding();
@@ -895,8 +942,12 @@ function widenOfficeReach() {
   if (state.panel.mode !== 'office' || state.officeReach?.id === state.panel.id) return;
   if (state.massingReadFor !== `office:${state.panel.id}:${OFFICE_REACH_M}`) return; // not yet read round this pin
   const t = focusTarget();
-  if (!t || t.key) return;
-  state.officeReach = {id: state.panel.id, m: OFFICE_REACH_FAR_M};
+  if (!t) return;
+  // The office's own name on the map, beyond the drawn square (a stray pin, js/office-building.js#POI_FAR_M): read its
+  // buildings too.
+  const named = t.poi && t.poi.distanceM + 120 > OFFICE_REACH_M ? Math.min(OFFICE_REACH_FAR_M, t.poi.distanceM + 150) : 0;
+  if (t.key && !named) return;
+  state.officeReach = {id: state.panel.id, m: named || OFFICE_REACH_FAR_M};
   updateSpatialLayers();
 }
 

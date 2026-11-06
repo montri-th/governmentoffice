@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.2.0",
+ "productVersion": "0.3.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-brief",
  "datasetCheckedOn": "2026-11-06",
@@ -312,7 +312,7 @@
   ],
   "ai": "Google Search with a question written for the view (0.3.3: /search?q=, answered at the top by Google’s AI Overview, AI Mode one tab away; never udm=50, which Google stops at “Continue with this search?” from another site)",
   "maps": "Google Maps search by public names",
-  "streetView": "only with a point (production point, station reference point “ใกล้สถานี”)",
+  "streetView": "with a point: on the street in front of the building being looked at, turned to face it (js/office-building.js#streetViewOf → map_action=pano&viewpoint&heading&pitch; owner 2026-11-06 “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”); before the building is known, or with no street within 120 m and the point inside it, the point itself; a station’s reference point “ใกล้สถานี”",
   "dataBoundary": "Google’s answers are Google’s: never copied into the data"
  },
  "buildingJoinContract": {
@@ -321,7 +321,30 @@
   "rule": "display-time point-in-footprint (js/building-join.js#joinBuildings)",
   "click": "one row → that office or place; several → the building panel “หน่วยงานและสถานที่ในอาคารนี้” (หน่วยงาน / สถานที่ by the scope; “สูงราว”, the outline source in the title and the provenance line)",
   "neverChanges": "any count or district membership",
-  "nearest": "an office whose point falls in no outline is framed on the nearest drawn building (cameraContract.buildingView.target) — never joined, counted or listed"
+  "nearest": "the camera’s building of an office is chosen apart (buildingChoiceContract, js/office-building.js#chooseBuilding) — never joined, counted or listed; the building panel still lists only the points inside its outline"
+ },
+ "buildingChoiceContract": {
+  "owner": "2026-11-06 “ทำไมจุดในภาพถึงเลือกอาคารผิด … อยากให้พี่หาเคสที่ spatial join ผิดให้เจอว่ามีรายการไหนบ้าง มีสาเหตุกี่แบบ แต่ละแบบควรแก้อย่างไรถึงจะดีที่สุด แล้วลงมือปรับแก้ให้เรียบร้อยทั้งหมด” (the Juvenile and Family Court of Ubon Ratchathani, ?office=b86ab4e816: a 104 m² coffee shop at its gate held the pin)",
+  "module": "js/office-building.js#chooseBuilding (pure; js/app.js#choiceOf passes the drawn footprints, and the named points of interest and streets of the same OpenFreeMap tiles: js/massing.js#streetsAndNames)",
+  "score": {
+   "name": "an OpenStreetMap point of interest that can be the office itself (POI_CLASSES: town_hall, office, police, fire_station, prison, school, place_of_worship …; never a bus stop, a shop or a restaurant) named as the office (nameSimilarity ≥ 0.72: abbreviations spelled out, “เเ” = “แ”) within 150 m of the point — or the office’s own name (≥ 0.95) carried by no other office, within 800 m — lends CHOICE.name × exp(−d/15 m) to the buildings at it; distance then counts from the nearer of the point and the named point",
+   "pin": "+0.9 when the point falls inside",
+   "distance": "−d/23 m, d from the point to the outline",
+   "street": "−1.15 when a street (motorway … minor; not service, track or path) runs between the point and the building",
+   "size": "types with a footprint floor (TYPE_FOOTPRINT_M2: district offices 800 m², municipalities 500–1,200, อบต. 400, police stations 500, fire 240, courts 800–1,600, prisons 600, camps 400): 1.25·ln(area/floor) below the floor, 0.45·ln(area/300 m²), +0.3 per 25 m back from the street (≤ 60 m)",
+   "tieBreak": "types without a floor keep the 0.2.0 tie-break (the larger building within 10 m of the best); police boxes and checkpoints take the nearest"
+  },
+  "fit": "conditional logit on the buildings OpenStreetMap names for 1,104 government offices within 150 m of their points (docs/BUILDING_CHOICE.md §3)",
+  "measured": {
+   "osmNamedOffices": 1547,
+   "pinFarther150m": 199,
+   "judged": 1104,
+   "pinInBuilding": 467,
+   "v020Right": 746,
+   "v030RightWithoutNames": 791
+  },
+  "audit": "scripts/audit-building-choice.mjs over CityMETER Building V4 (z16) round every government office in a CityMETER unit (12,736) → handoff/building-choice-audit.json (3,909 flagged rows) and docs/BUILDING_CHOICE.md",
+  "never": "changes a row, a point, a count or a district membership; the building panel lists the points inside an outline only"
  },
  "interactionContract": {
   "mapClicks": "focus pin → the building being looked at (x-ray: frame again) → focus building → station → province view district / province frame (below zoom 8) → district",
@@ -355,7 +378,7 @@
   "buildingView": {
    "owner": "2026-10-29 19:47 “อาคารที่เลือก หรือ on focus ให้แสดงด้วยมุมมอง 2-point perspective เสมอ zoom to fit viewport เสมอด้วย”",
    "module": "js/camera.js#fitBuilding, twoPointBearing, wallAzimuth, occlusionScore, screenBounds (from CityMETER · Shopping centers); js/app.js#frameFocus",
-   "target": "js/app.js#focusTarget — the open building; the building the open office’s point falls in, else (the Hotel rule of 2026-11-02 “… ต้องแสดง 2-point perspective ของ 3d building mass ทุกกรณี”) the drawn building nearest the office’s point: js/building-join.js#nearestBuilding — distance from the point to the outline on a local plane, within 300 m (SCHOOL_REACH_M), the largest piece within 10 m of the nearest; when nothing is drawn within 300 m the focus tier is loaded once more for 800 m round the point (SCHOOL_REACH_FAR_M); legend “อาคารใกล้หมุด”, framed with the point (one zoom step wider, maxZoom 20); a camera choice only, never a join, a count or a located-in claim",
+   "target": "js/app.js#focusTarget — the open building; for an open office with a point the building js/office-building.js#chooseBuilding picks among the drawn buildings within 300 m of the point (800 m once when nothing is drawn within 300 m, or the reach of the office’s own name on the map, buildingChoiceContract); legend “อาคารที่หมุดตก” (the point falls in it), “อาคารตามชื่อบนแผนที่” (its name on the map decided it) or “อาคารใกล้หมุด”; a building that holds no point is framed with the point (one zoom step wider, maxZoom 20) unless it stands more than 200 m from it; a camera choice only, never a join, a count or a located-in claim",
    "bearing": "dominant wall azimuth + 45°, on the diagonal where the drawn focus buildings (massing.obstaclesNear, 400 m) hide least of it, then the one nearest the current bearing",
    "fit": "eye preset; shift lens (0.3.2, js/camera.js#lensPadding): padding moves the principal point up to the free box’s centre, never below the canvas centre (pitch + fov/2 < 90 keeps the horizon out), so the camera looks straight at the building at pitch 75 on a phone’s strip above the sheet as on a desktop; fit points = the pieces as the focus tier draws them at building zoom (massing.fitPointsOf → js/massing.js#footprintFitPoints: the offset and fillets of zoom 18, ground and roof), never the shape drawn at the starting zoom (up to 3.6 m wider on every side); every one inside the free box (js/app.js#visibleBox: below the toolbar, above the Aha card, legend, chart tray, table or open phone sheet, left of the zoom control), one side filling 94% of it; maxZoom 21 when the building is known (js/camera.js#BUILDING_MAX_ZOOM — offices stand in low buildings across a campus; the Shopping centers limit 19.5 left a 40 m building at half the box) / 18 while unknown, minZoom 14",
    "unknown": "a 90 m box round the point (12 m tall) framed the same way while the buildings load, and where nothing is drawn within 800 m; the camera turns to the building when it arrives, at most three times, never after a user camera move",
@@ -710,6 +733,6 @@
   "site": "GitHub Pages from main /root",
   "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
   "liveCheck": "npm run verify:live",
-  "cacheTag": "?v=20261106-r2 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+  "cacheTag": "?v=20261106-r3 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
  }
 }

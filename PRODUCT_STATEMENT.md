@@ -1,6 +1,6 @@
 # Product Statement — CityMETER Dataset: Government Office
 
-Winning strategy ของชุดข้อมูลนี้ เขียนตามโครง Who → What → Which → How ของ Landometer Master Brand Brief v0.5.3 §7.2 และ Product Brief — CityMETER v6 ป้ายหลักฐานใช้มาตรฐาน MBB §3.7: **Observed fact** · **Owner-stated** · **Inference** · **Hypothesis** · **Project evidence** ตัวเลขทุกตัวอ้างไฟล์และ field path ได้ (`data/offices.json` เว้นแต่ระบุ) และเป็น snapshot ของรุ่น 0.2.0 (ข้อมูลสร้าง 6 พ.ย. 2569) หน้าจอคำนวณจากข้อมูลทุกครั้ง ตัวเลขในเอกสารนี้จึงเป็น fixture ไม่ใช่ค่าคงที่
+Winning strategy ของชุดข้อมูลนี้ เขียนตามโครง Who → What → Which → How ของ Landometer Master Brand Brief v0.5.3 §7.2 และ Product Brief — CityMETER v6 ป้ายหลักฐานใช้มาตรฐาน MBB §3.7: **Observed fact** · **Owner-stated** · **Inference** · **Hypothesis** · **Project evidence** ตัวเลขทุกตัวอ้างไฟล์และ field path ได้ (`data/offices.json` เว้นแต่ระบุ) และเป็น snapshot ของรุ่น 0.3.0 (ข้อมูลสร้าง 6 พ.ย. 2569 เหมือนรุ่น 0.2.0) หน้าจอคำนวณจากข้อมูลทุกครั้ง ตัวเลขในเอกสารนี้จึงเป็น fixture ไม่ใช่ค่าคงที่
 
 ## 0. Metadata
 
@@ -8,8 +8,8 @@ Winning strategy ของชุดข้อมูลนี้ เขียน�
 |---|---|
 | Parent product | CityMETER (City Intelligence Base Layer ของ Landometer) · แกน Location (ทะเบียนกลาง `research.TH.government_office` / Location / TH) · production dataset code `governmentOfficer` (`https://landometer.com/v3/citymeter?d=governmentOfficer`, API `government-agency`) |
 | Feature / dataset | Government Office — หน่วยงานรัฐและบุคลากรที่ production บันทึก ทั่วประเทศไทย ระดับเขต/อำเภอ พร้อมหมวดและประเภทของ production บริการรัฐที่ใกล้ที่สุดรอบจุด บริบทรถไฟฟ้า และสำนักงานที่ย้ายหรือเปิดใหม่ |
-| รุ่นเอกสาร | 0.2.0 · 6 พฤศจิกายน 2569 |
-| สถานะ | Public demo รุ่น 0.2.0 บน GitHub Pages (`https://montri-th.github.io/governmentoffice/`); ชุดข้อมูลเป็นรายชื่อรอยืนยันของทีมวิจัยจาก production ไม่ใช่ทะเบียนหน่วยงานราชการอย่างเป็นทางการ |
+| รุ่นเอกสาร | 0.3.0 · 6 พฤศจิกายน 2569 |
+| สถานะ | Public demo รุ่น 0.3.0 บน GitHub Pages (`https://montri-th.github.io/governmentoffice/`); ชุดข้อมูลเป็นรายชื่อรอยืนยันของทีมวิจัยจาก production ไม่ใช่ทะเบียนหน่วยงานราชการอย่างเป็นทางการ |
 | ผู้รับผิดชอบ | Landometer · CityMETER (owner: Montri) |
 | ผู้ใช้หลัก | ทีมพัฒนาโครงการและนักลงทุนที่ดิน · ทีมเลือกทำเลค้าปลีกและบริการ · จังหวัด อปท. และหน่วยงานที่วางแผนจุดบริการ · ผู้ประเมินมูลค่าและสถาบันการเงิน (**Hypothesis**, §2.1) |
 | ชุดข้อมูลที่ใช้ร่วม | CityMETER · Transit (สถานีราง release `transit-data-2026-10-31-r1`, `meta.context.rail`) · หน่วยอาคารของ CityMETER · Hotel (CityMETER Building V4 ใน อปท./เขตที่ประเมินแล้ว นอกนั้น OpenStreetMap, `data/building-units/`) · ลิงก์ไป CityMETER · School เมื่อเลือกหมวดการศึกษา |

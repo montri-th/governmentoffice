@@ -153,7 +153,11 @@ without recorded personnel travel to the map as one multipoint each, display onl
 recorded personnel; short forms are those Thai readers use (อบต. ทต. ทม. ทน. สภ. สน. …). Buildings per area: the units
 of the CityMETER · Hotel build (`data/building-units/`, copied without the per-unit hotel counts): CityMETER Building V4
 inside a unit where it holds at least 1.15 × the OpenStreetMap buildings, else OpenStreetMap. Terrain and the building
-camera follow the Hotel 0.3.x contracts unchanged.
+camera follow the Hotel 0.3.x contracts. The building the camera turns to for an office (0.3.0) is chosen by
+`js/office-building.js` — an OpenStreetMap point of interest named as the office, the pin, the distance, the side of
+the street, the type's footprint floor and the setback — never the building holding the pin just because it holds it;
+Street View stands on the street in front of that building, facing it. Method, causes, accuracy and the audit of every
+government office in a CityMETER unit: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`.
 
 ## 11. Not published
 
@@ -176,6 +180,10 @@ API, a private copy or the private production repository.
   (13 named สถานีตำรวจภูธรอำเภอพุนพิน, 3 with a variant of the name) within about 400 m. A cleaned production would
   lower those counts.
 - 899 points have no category yet (“ยังไม่ระบุหมวด”), mostly agencies' head offices in Bangkok.
+- Points off their building (0.3.0 audit, `handoff/building-choice-audit.json`): 199 points stand more than 150 m from
+  the office OpenStreetMap names (`pin_far_<m>`), 657 have no building drawn within 150 m and 186 none of half the
+  type's footprint floor — the point or the building data needs a look; 358 offices' 0.2.0 building was not the one
+  OpenStreetMap names (`named_elsewhere_<m>`), which the page now turns to.
 
 ## 13. Rebuild
 

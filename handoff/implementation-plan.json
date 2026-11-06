@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.2.0",
+ "productVersion": "0.3.0",
  "updatedOn": "2026-11-06",
  "documentType": "implementation-plan",
  "architecture": {
@@ -254,7 +254,8 @@
     "T5",
     "T6",
     "T7",
-    "T8"
+    "T8",
+    "T10"
    ],
    "acceptanceCriteria": [
     "A17",
@@ -266,6 +267,29 @@
     "PRODUCT_STATEMENT.md",
     "handoff/",
     "index.html"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T10",
+   "title": "Building of an office and Street View facing it (0.3.0): audit, causes, fitted choice, names and streets from the basemap tiles",
+   "dependsOn": [
+    "T8"
+   ],
+   "acceptanceCriteria": [
+    "A19",
+    "A20"
+   ],
+   "files": [
+    "js/office-building.js",
+    "js/massing.js",
+    "js/app.js",
+    "js/ask.js",
+    "js/panel.js",
+    "scripts/audit-building-choice.mjs",
+    "docs/BUILDING_CHOICE.md",
+    "handoff/building-choice-audit.json",
+    "tests/office-building.test.js"
    ],
    "status": "done"
   }
@@ -370,7 +394,7 @@
   {
    "id": "A17",
    "scenario": "release",
-   "expected": "one cache tag ?v=20261106-r2; one product version 0.2.0; handoff JSON valid",
+   "expected": "one cache tag ?v=20261106-r3; one product version 0.3.0; handoff JSON valid",
    "verificationType": "unit (tests/release.test.js)"
   },
   {
@@ -378,6 +402,18 @@
    "scenario": "live",
    "expected": "GitHub Pages bytes equal the repository (npm run verify:live); desktop and 390 px, light and dark walked",
    "verificationType": "live"
+  },
+  {
+   "id": "A19",
+   "scenario": "building of an office (0.3.0)",
+   "expected": "the court case (a pin in a coffee shop at the gate) turns to the court; a pin in a building of the type’s size keeps it; a police box keeps its kiosk; the street side, the setback and a named point of interest decide as the fit says; Street View stands on the street in front and faces the building",
+   "verificationType": "unit (tests/office-building.test.js)"
+  },
+  {
+   "id": "A20",
+   "scenario": "audit of the building choice",
+   "expected": "every government office in a CityMETER unit audited over V4 (12,736); causes counted; flagged rows listed with the OpenStreetMap comparison",
+   "verificationType": "script (scripts/audit-building-choice.mjs) + docs/BUILDING_CHOICE.md"
   }
  ],
  "developerWorkflow": [

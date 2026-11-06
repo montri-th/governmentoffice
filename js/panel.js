@@ -456,7 +456,7 @@ export function renderBuilding(b, ctx = {}) {
       <h2>${esc(ctx.unit?.place || 'หน่วยงาน')}ในอาคารนี้</h2>
       <div class="metrics compact">${metricTile(b.count, 'แห่ง', 'office')}${staffTileOf(b, ctx.unit)}</div>
       ${actionBar({kind: 'building', rows: b.rows, area: b.area ? {place: area, province: provinceName(b.area.province)} : null,
-        point: withPoint ? {lat: withPoint.latitude, lon: withPoint.longitude, role: 'point'} : null})}
+        point: b.view ? {...b.view, role: 'point'} : withPoint ? {lat: withPoint.latitude, lon: withPoint.longitude, role: 'point'} : null})}
     </section>
     <section class="panel-section"><div class="section-heading">${heading('office', ctx.unit?.place || 'หน่วยงาน')}<span class="hint">${num(b.count)}</span></div>${officeList(b.rows.slice(0, 40), {showArea: b.areaCount > 1, index: ctx.index})}
       ${b.count > 40 ? moreButton(b.count) : ''}</section>
@@ -522,7 +522,7 @@ export function renderOffice(d, ctx = {}) {
       ${ownEvents(d.events)}
       <div class="fact-chips">${typeChip}${staffChip}${areaChip}${railChip}${nextChip}${buildingChip}${coords ? '' : '<span class="fact-chip is-quiet">ไม่มีพิกัด</span>'}</div>
       ${actionBar({kind: 'office', row: r, area: d.area ? {place: `${w.area}${d.area.name}`, province: prov} : r.province ? {place: '', province: prov} : null,
-        point: hasPoint(r) ? {lat: r.latitude, lon: r.longitude, role: 'point'} : null})}
+        point: hasPoint(r) ? {...(d.view || {lat: r.latitude, lon: r.longitude}), role: 'point'} : null})}
       <details class="source-details"><summary>ที่มาและพิกัด</summary>
         <dl class="facts">
           <dt>แหล่ง</dt><dd>CityMETER Government Officer · ${esc(r.cat?.th || 'รอการยืนยัน')} · ${esc(r.type?.th || '')}</dd>

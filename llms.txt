@@ -1,6 +1,6 @@
 # CityMETER · Government Office
 
-> Every point of the CityMETER production Government Officer dataset across Thailand (440,005, as production counts them) by district (เขต/อำเภอ): government offices and the places of the same dataset (education, religion, community), with production's groups and types, the personnel production records at an office, the nearest district office, local government, police station, fire station and court round a point, recent moves and openings with the agencies' announcements, and straight-line distance to rail stations (CityMETER Transit). A Landometer CityMETER public demo, release 0.2.0 (2026-11-06). Research sheet read and built 2026-11-06.
+> Every point of the CityMETER production Government Officer dataset across Thailand (440,005, as production counts them) by district (เขต/อำเภอ): government offices and the places of the same dataset (education, religion, community), with production's groups and types, the personnel production records at an office, the nearest district office, local government, police station, fire station and court round a point, recent moves and openings with the agencies' announcements, and straight-line distance to rail stations (CityMETER Transit). A Landometer CityMETER public demo, release 0.3.0 (2026-11-06): the camera turns to the building an office most likely occupies (OpenStreetMap names, type size, street side, setback; docs/BUILDING_CHOICE.md) and Street View faces it. Research sheet read and built 2026-11-06.
 
 What one figure means:
 - points (แห่ง) = one point of the production Government Officer dataset (440,005; every point is a row, as production counts them, repeated points of one office included). Not an official register, not a field check that the office is open at that point.
@@ -12,7 +12,7 @@ What one figure means:
 - distances = straight lines between reference points, not walking routes, travel times or catchments.
 - districts = CityMETER production districts (codes as in https://landometer.com/v3/citymeter/{province}/D/{district}?d=governmentOfficer); membership is the production district of the point's overlay subdistrict.
 
-Snapshot (release 0.2.0; fixtures, recompute from data):
+Snapshot (release 0.3.0; fixtures, recompute from data):
 - 440,005 production points = 440,005 rows: government offices 20,568 (administration and local government 9,667 · police 6,548 · fire 2,270 · unclassified 903 · military 708 · courts and justice 472) and places 419,437 (community 232,181 · religion 111,421 · education 75,835); 535,745 personnel recorded at 10,095 offices; 925 of 928 districts, 77 provinces. Rows and Σ officer per district × category equal production's government-agency info (9,046 cells, 0 mismatches).
 - 17% of the points of Nakhon Ratchasima (3,466 of 20,003) are in Mueang Nakhon Ratchasima, Pak Thong Chai and Dan Khun Thot; the district with the most outside it is Mueang Chiang Rai (2,054).
 - Government offices only: 22% of those of Nakhon Ratchasima (165 of 744) are in Mueang Nakhon Ratchasima, Pak Thong Chai and Sikhio.

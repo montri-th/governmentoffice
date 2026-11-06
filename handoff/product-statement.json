@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.2.0",
+ "productVersion": "0.3.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-statement",
  "dataset_id": "research.TH.government_office",
@@ -243,7 +243,8 @@
   "899 points have no category yet, mostly agencies’ head offices in Bangkok; their personnel is the agency’s whole workforce.",
   "Distances are straight lines between reference points.",
   "Building heights are model estimates (CityMETER Building V4) or tags/defaults (OpenStreetMap).",
-  "9,806 production points repeat an office (same type and name, same province, within 100 m) and are counted as production counts them; e.g. อำเภอพุนพิน holds 16 points of one police station."
+  "9,806 production points repeat an office (same type and name, same province, within 100 m) and are counted as production counts them; e.g. อำเภอพุนพิน holds 16 points of one police station.",
+  "The camera’s building of an office is chosen from the OpenStreetMap name of the office where the map has one, else from its point, its type’s size, its side of the street and its setback (docs/BUILDING_CHOICE.md); without the names that choice matched the building OpenStreetMap names for 72 % of 1,104 offices measured (0.2.0: 68 %), and 13 % of the offices OpenStreetMap names have their production point more than 150 m from it (handoff/building-choice-audit.json lists them for the research team)."
  ],
  "claimBoundary": {
   "canSay": [
