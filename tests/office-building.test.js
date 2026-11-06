@@ -167,6 +167,16 @@ test('Street View stands on the street in front of the building and faces it', (
   const fromStreet = streetViewOf([block.outer], 20, at(0, 0), [front, drive]);
   assert.ok(Math.abs(fromStreet.lat - at(0, 8)[1]) < 3 * my, 'the street, not the drive');
   assert.equal(streetViewOf([block.outer], 20, at(0, 0), [drive]).from, 'road', 'the drive when it is all there is');
+  // Between two streets (the court): a pin dropped at the gate marks the street people come in from, even when the back
+  // street runs nearer the building; a pin far from the building does not.
+  const courtBlock = rect(9, 40, -55, 47, 30);                  // its centre 55 m south of the gate street
+  const gateStreet = {cls: 'tertiary', coords: [at(-200, 8), at(200, 8)]};
+  const backStreet = {cls: 'minor', coords: [at(-200, -87), at(200, -87)]};  // 32 m south of its centre
+  const fromGate = streetViewOf([courtBlock.outer], 23, at(0, 0), [gateStreet, backStreet]);
+  assert.ok(fromGate.lat > at(0, 0)[1], 'on the gate street');
+  assert.ok(fromGate.heading > 90 && fromGate.heading < 270, `faces south: ${fromGate.heading}`);
+  const strayPin = streetViewOf([courtBlock.outer], 23, at(-150, 60), [gateStreet, backStreet]);
+  assert.ok(strayPin.lat < at(0, -80)[1], 'a pin 150 m away: the street nearer the building');
   // No street: from the pin when it stands outside the building; nothing when it is inside.
   const fromPin = streetViewOf([block.outer], 20, at(0, 0), []);
   assert.equal(fromPin.from, 'pin');

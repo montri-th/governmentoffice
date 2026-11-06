@@ -1,6 +1,6 @@
 # CityMETER Government Office 0.3.0 — verification
 
-Release 0.3.0 (cache tag `20261106-r4`), built 2026-11-06. 0.3.0 answers the owner's requests of 2026-11-06 on the
+Release 0.3.0 (cache tag `20261106-r5`), built 2026-11-06. 0.3.0 answers the owner's requests of 2026-11-06 on the
 Juvenile and Family Court of Ubon Ratchathani (“ทำไมจุดในภาพถึงเลือกอาคารผิด … อยากให้พี่หาเคสที่ spatial join ผิดให้เจอว่า
 มีรายการไหนบ้าง มีสาเหตุกี่แบบ แต่ละแบบควรแก้อย่างไรถึงจะดีที่สุด แล้วลงมือปรับแก้ให้เรียบร้อยทั้งหมด”, “streetview ถ้าเลือกแล้ว
 ต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the building the camera turns to for an office (`js/office-building.js`,

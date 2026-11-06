@@ -285,6 +285,8 @@ export function chooseBuilding(pieces, office, {keyOfPiece = null, pois = [], ro
 export const STREET_CLASSES = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service']);
 /** Roads farther than this from the building are never its frontage. */
 export const FRONTAGE_REACH_M = 120;
+/** A pin within this distance of the building marks its gate: the street the pin stands on is its frontage. */
+export const GATE_M = 60;
 
 /** Area-weighted centroid of a lon/lat ring (vertex mean when degenerate). */
 function centroid(ring) {
@@ -313,9 +315,9 @@ export function bearingDeg([lon1, lat1], [lon2, lat2]) {
  * Street View in front of a building, turned to face it.
  * rings: the building's outer rings ([[lon, lat]…], pieces as drawn); height: its height (m); pin: the office's point;
  * roads: [{cls, brunnel?, coords: [[lon, lat]…]}].
- * The viewpoint is the point of a public street nearest the building's centre (the building's own frontage; a service
- * road — a compound's drive or car park — a motorway or a bridge only when none is near), the street nearer the pin
- * first when two are equally near (a pin is often dropped at the gate); without a street within
+ * The viewpoint is the point of a public street nearest the building's centre (a service road — a compound's drive or car
+ * park — a motorway or a bridge only when none is near), counting the way from the pin too: in full when the pin stands at
+ * the building (within GATE_M — dropped at the gate, it marks the street people come in from), a quarter otherwise; without a street within
  * FRONTAGE_REACH_M, the pin itself when it stands outside the building. heading = bearing viewpoint → centre; pitch
  * lifts the view for a tall building close by.
  * → {lat, lon, heading, pitch, from: 'road'|'pin'} | null (nothing to face it from).
@@ -331,6 +333,9 @@ export function streetViewOf(rings, height, pin, roads = []) {
   const tx = target[0] * kx, ty = target[1] * ky;
   const hasPin = Array.isArray(pin) && Number.isFinite(pin[0]) && Number.isFinite(pin[1]);
   const pinInside = hasPin && usable.some(r => pointInRing(pin, r));
+  // A pin at the building (inside or within GATE_M) marks the side people come in from: its street counts in full.
+  const pinD = !hasPin ? Infinity : pinInside ? 0 : Math.min(...usable.map(r => measure({outer: r}, pin, kx, ky).d));
+  const wPin = pinD <= GATE_M ? 1 : 0.25;
   // Public streets at ground level first; a service road (a compound's drive or car park, rarely a panorama), a
   // motorway or a bridge (an elevated view) only when none is near.
   let best = null;
@@ -347,7 +352,7 @@ export function streetViewOf(rings, height, pin, roads = []) {
       const q = [qx / kx, qy / ky];
       if (usable.some(r => pointInRing(q, r))) continue; // a street under the building (an arcade) shows its inside
       const dP = hasPin ? Math.hypot(qx - pin[0] * kx, qy - pin[1] * ky) : 0;
-      const cost = dT + 0.5 * dP + penalty;
+      const cost = dT + wPin * dP + penalty;
       if (!best || cost < best.cost) best = {cost, q, dT};
     }
   }
