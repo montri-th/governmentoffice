@@ -116,11 +116,12 @@ const EVENT_PIC = ['moved', 'opened', 'opened', 'service'];
  * `data-prov`, its word for screen readers), then the method link. Rail, recent events and terrain sources join the
  * source part when the view shows them.
  */
-export function provenance(ctx = {}, boundary = '', {rail = false, terrain = false, events = false} = {}) {
+export function provenance(ctx = {}, boundary = '', {rail = false, terrain = false, events = false, site = null} = {}) {
   const meta = ctx.meta || {};
   const sources = ['CityMETER Government Officer', events ? 'ประกาศของหน่วยงาน 2567–2569' : '',
     rail ? `CityMETER Transit ${thaiDate(meta.context?.rail?.asOf || '')}`.trim() : '',
-    terrain ? `SRTM 30 ม. (2543)${ctx.osmDate ? ` · OSM ${thaiDate(ctx.osmDate)}` : ''}` : ''].filter(Boolean);
+    terrain ? `SRTM 30 ม. (2543)${ctx.osmDate ? ` · OSM ${thaiDate(ctx.osmDate)}` : ''}` : '',
+    site ? `บริเวณ ${site.via ? `CityMETER ${site.via} · ` : ''}${site.source || 'งานวิจัย'} ${thaiDate(site.on || '')} ${site.credit || ''}`.replace(/\s+/g, ' ').trim() : ''].filter(Boolean);
   return `<p class="hint panel-foot provenance"><span class="prov-part" data-prov="dataset">${pic('dataset')}<span class="sr-only">ชุดข้อมูล </span>CityMETER Government Office</span> <span class="prov-part" data-prov="source"><span class="sr-only">แหล่ง</span>จาก ${esc(sources.join(' · '))}</span><span class="prov-part" data-prov="date">${pic('date')}<span class="sr-only">ตรวจ </span>${esc(thaiDate(meta.checkedOn || ''))}</span><span class="prov-part" data-prov="boundary">${pic('area')}<span class="sr-only">ขอบเขต </span>${esc(boundary)}</span><span class="prov-part prov-method"><a href="${METHOD_URL}" target="_blank" rel="noopener">วิธีนับ</a></span></p>`;
 }
 
@@ -509,6 +510,9 @@ export function renderOffice(d, ctx = {}) {
   const nextChip = r.railNext && (!r.rail || r.railNext.m < r.rail.m)
     ? `<span class="fact-chip" title="สถานีที่กำลังสร้างที่ใกล้ที่สุด · ระยะตรง">${pic('construction')}${esc(stationShort(r.railNext.station))} ${nw(esc(meters(r.railNext.m)))} · กำลังสร้าง</span>` : '';
   const bd = d.building;
+  // The office's site (docs/SITES.md): the buildings of its compound, as the map shows them together.
+  const site = r.site;
+  const siteChip = site ? `<span class="fact-chip" title="อาคารในบริเวณของหน่วยงาน · ${esc(site.source || 'งานวิจัย')}${site.on ? ` · ${esc(thaiDate(site.on))}` : ''}">${pic('building')}ทั้งบริเวณ ${nw(`${num(site.n)} อาคาร`)}</span>` : '';
   const buildingChip = bd?.others ? `<button type="button" class="fact-chip" data-action="select-building" data-id="${esc(bd.key)}" title="หมุดของหน่วยงานอีก ${num(bd.others)} แห่งอยู่ในอาคารนี้บนแผนที่">${pic('building')}อีก ${num(bd.others)} แห่งในอาคารนี้</button>` : '';
   const point = coords ? `<span class="data-number">${esc(coords)}</span>` : '<span>ไม่มีพิกัด</span>';
   // The production category, where the group name does not already say it (มหาวิทยาลัย, โรงเรียน, ความปลอดภัยชุมชน…).
@@ -520,7 +524,7 @@ export function renderOffice(d, ctx = {}) {
         <h2>${esc(r.name || 'ไม่มีชื่อ')}</h2>
         ${subLine(r, 'branch-name', 'p')}</div></div>
       ${ownEvents(d.events)}
-      <div class="fact-chips">${typeChip}${staffChip}${areaChip}${railChip}${nextChip}${buildingChip}${coords ? '' : '<span class="fact-chip is-quiet">ไม่มีพิกัด</span>'}</div>
+      <div class="fact-chips">${typeChip}${staffChip}${areaChip}${railChip}${nextChip}${siteChip}${buildingChip}${coords ? '' : '<span class="fact-chip is-quiet">ไม่มีพิกัด</span>'}</div>
       ${actionBar({kind: 'office', row: r, area: d.area ? {place: `${w.area}${d.area.name}`, province: prov} : r.province ? {place: '', province: prov} : null,
         point: hasPoint(r) ? {...(d.view || {lat: r.latitude, lon: r.longitude}), role: 'point'} : null})}
       <details class="source-details"><summary>ที่มาและพิกัด</summary>
@@ -528,6 +532,7 @@ export function renderOffice(d, ctx = {}) {
           <dt>แหล่ง</dt><dd>CityMETER Government Officer · ${esc(r.cat?.th || 'รอการยืนยัน')} · ${esc(r.type?.th || '')}</dd>
           ${r.agency ? `<dt>หน่วยงาน</dt><dd>${esc(r.agency)}${r.ministry ? ` · ${esc(r.ministry)}` : ''}</dd>` : ''}
           <dt>พื้นที่</dt><dd>${esc(ADMIN_TH[r.admin] || '')}</dd>
+          ${site ? `<dt>บริเวณ</dt><dd>${nw(`${num(site.n)} อาคาร`)} · ${site.via ? `CityMETER ${esc(site.via)} · ` : ''}${esc(site.source || 'งานวิจัย')}${site.url ? ` ${link(site.url, hostOf(site.url) || 'ผังโครงการ')}` : ''}${site.buildings ? ` · อาคาร ${esc(site.buildings)}` : ''}${site.on ? ` · ${nw(esc(thaiDate(site.on)))}` : ''}${site.credit ? ` · ${site.creditUrl ? link(site.creditUrl, site.credit) : esc(site.credit)}${site.licence ? ` (${esc(site.licence)})` : ''}` : ''}</dd>` : ''}
           <dt>พิกัด</dt><dd>${point}</dd>
           <dt>รหัส</dt><dd><span class="hint data-number">${esc(r.id)}</span></dd>
         </dl>
@@ -538,7 +543,7 @@ export function renderOffice(d, ctx = {}) {
       <div class="fact-chips terrain-chips" data-terrain-for="${esc(r.id)}"><span class="hint">กำลังอ่านภูมิประเทศ</span></div></section>` : ''}
     ${servicesSection(d.services)}
     ${nearbySection(d.nearby, d.group?.th, ctx.groups || [])}
-    ${provenance(ctx, d.area ? `${w.area}${d.area.name} ${prov}` : prov || 'ไม่ระบุจังหวัด', {rail: Boolean(r.rail || r.railNext), terrain: hasPoint(r), events: Boolean(d.events?.length)})}`;
+    ${provenance(ctx, d.area ? `${w.area}${d.area.name} ${prov}` : prov || 'ไม่ระบุจังหวัด', {rail: Boolean(r.rail || r.railNext), terrain: hasPoint(r), events: Boolean(d.events?.length), site: site || null})}`;
 }
 
 /** Terrain chips (js/terrain.js#terrainChips) as fact chips; '' when nothing is known. */

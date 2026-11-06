@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.3.0",
+ "productVersion": "0.4.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-brief",
  "datasetCheckedOn": "2026-11-06",
@@ -23,7 +23,7 @@
   "switch the measure (หน่วยงานและสถานที่ | บุคลากร)",
   "district → groups, types, moves and openings, stations, offices",
   "station → offices within 500 m and the nearest services",
-  "office → building view, type, personnel, agency, its move, nearest services, offices round it",
+  "office → building view (the whole compound for an office with a site), type, personnel, agency, its move, nearest services, offices round it",
   "group or type filter → its card; ?group=offices for the government offices, one group, or every group (default)",
   "charts and table",
   "open the same area in CityMETER production"
@@ -346,6 +346,17 @@
   "audit": "scripts/audit-building-choice.mjs over CityMETER Building V4 (z16) round every government office in a CityMETER unit (12,736) → handoff/building-choice-audit.json (3,909 flagged rows) and docs/BUILDING_CHOICE.md",
   "never": "changes a row, a point, a count or a district membership; the building panel lists the points inside an outline only"
  },
+ "siteContract": {
+  "owner": "2026-11-06 “ใช้วิธีนี้ และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม osm-area-site-join และ campus-site-join” · “เอาแบบ quick win … แค่ให้ครอบคลุมทั้งประเทศ” · “อนุมัติ ทุกข้อ” (OpenStreetMap frames as a source, ODbL with the credit) · “OK” (rows in a tab of the research sheet) · “OK” (OpenStreetMap-building helper) · “ยังไม่ต้อง … เตรียมเชื่อมไว้ละกัน” (School/Temple later, link prepared)",
+  "meaning": "the drawn buildings of one office’s compound, grouped for display — never a deed, a parcel, a land area or ownership",
+  "data": "data/sites.json (scripts/build-sites.py from the research sheet’s tab 07_SITE_BOUNDARY_CHECK, checked rows only, digest of the sheet’s page recorded): per office key {pts: one interior point per building, n, on, src, b, url?, x?}; 255 sites, 6,757 buildings at release",
+  "sources": "boundary_source osm_polygon · osm_polygon+site_layout (never osm_area); building_source cm_v4 · osm_buildings; the points come only from scripts/site-buildings.mjs (the page’s map code), within 600 m of the office’s point",
+  "display": "js/model.js#decodeSites/attachSites → row.site; js/app.js#siteOf (buildingsAtPoints over the drawn pieces) → focusTarget {why: site, refs: every building of the site, main: the building chooseBuilding picks}; the massing reads max(office reach, site reach); the camera frames every building with the pin; legend “อาคารในบริเวณหน่วยงาน”; Street View faces main",
+  "panel": "chip “ทั้งบริเวณ N อาคาร”; “ที่มาและพิกัด” row บริเวณ: N อาคาร · source · building source · date · © OpenStreetMap contributors (link to https://www.openstreetmap.org/copyright, ODbL-1.0); the provenance line adds “บริเวณ <source> <date> © OpenStreetMap contributors”",
+  "licence": "ODbL 1.0 for the site groups (derived from OpenStreetMap areas and buildings); the credit on every view that shows a site",
+  "notPublished": "the frame (boundary_geojson), OpenStreetMap element links, match tiers, notes, main-building notes, checkers",
+  "external": "School and Temple sites link back with go = the Government Office key (build-sites.py --external); rank dol_parcels+site_layout 4 · osm_polygon+site_layout 3 · site_layout 2 · osm_polygon 1; a higher rank replaces this sheet’s site, an equal rank keeps it; none linked at 0.4.0"
+ },
  "interactionContract": {
   "mapClicks": "focus pin → the building being looked at (x-ray: frame again) → focus building → station → province view district / province frame (below zoom 8) → district",
   "reframe": "every way into a building view frames it again",
@@ -644,7 +655,8 @@
    "02_OFFICE_CANDIDATES rows (DOPA/BMA name list with repeats)",
    "01_AGENCIES contact addresses and evidence ids",
    "map links and coordinate source links (06 แหล่งพิกัด)"
-  ]
+  ],
+  "sites": "data/sites.json — office sites (siteContract), ODbL 1.0, © OpenStreetMap contributors"
  },
  "visualSystem": {
   "lds": "Landometer-Design-System-v0.9.7.md (standalone-0.9.7-r1, v0.9.7-owner.1, color-srgb-10, sha256 d3085cbc…96)",
@@ -733,6 +745,6 @@
   "site": "GitHub Pages from main /root",
   "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
   "liveCheck": "npm run verify:live",
-  "cacheTag": "?v=20261106-r6 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+  "cacheTag": "?v=20261106-r7 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
  }
 }

@@ -4,7 +4,8 @@
 
 - เว็บ: https://montri-th.github.io/governmentoffice/
 - ระบบจริงของ CityMETER: https://landometer.com/v3/citymeter?d=governmentOfficer
-- รุ่น 0.3.0 · 6 พฤศจิกายน 2569 · ชีตวิจัย “CityMETER Government Office Thailand — รายชื่อรอยืนยัน 2026-11-05” อ่านและสร้างข้อมูล 6 พฤศจิกายน 2569
+- รุ่น 0.4.0 · 6 พฤศจิกายน 2569 · ชีตวิจัย “CityMETER Government Office Thailand — รายชื่อรอยืนยัน 2026-11-05” อ่านและสร้างข้อมูล 6 พฤศจิกายน 2569
+- 0.4.0 (เจ้าของ 6 พ.ย. 2569 “ใช้วิธีนี้ และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม osm-area-site-join และ campus-site-join” · “อนุมัติ ทุกข้อ”): ไซต์ของหน่วยงาน — อาคารทุกหลังในบริเวณเดียวกันจากกรอบพื้นที่ OpenStreetMap ที่ตรงชื่อและที่ตั้ง — 255 แห่ง (หน่วยงานรัฐ 142 · มหาวิทยาลัยและวิทยาลัย 113) 6,757 อาคาร เปิดหน่วยงานแล้วแผนที่แสดงทั้งบริเวณ แผงบอก “ทั้งบริเวณ N อาคาร” · แถวอยู่ในแท็บ `07_SITE_BOUNDARY_CHECK` ของชีตวิจัย · `docs/SITES.md`
 - 0.3.0 (เจ้าของ 6 พ.ย. 2569 “ทำไมจุดในภาพถึงเลือกอาคารผิด … แล้วลงมือปรับแก้ให้เรียบร้อยทั้งหมด”): เลือกอาคารของหน่วยงานใหม่ — ชื่อบนแผนที่ (OpenStreetMap) ขนาดตามประเภท ฝั่งถนน และระยะร่น แทน “อาคารที่หมุดตก” · Street View ยืนบนถนนหน้าอาคารและหันเข้าหาอาคาร · สาเหตุ จำนวน และรายการที่ต้องแก้พิกัด: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`
 - 0.2.0 (เจ้าของ 6 พ.ย. 2569 “อยากได้ทั้งสี่แสนจุด”): ทุกจุดของ production เป็น 1 แถว และหน้าแรกนับทุกหมวด · 0.1.0 นับเฉพาะหน่วยงานรัฐ 6 หมวด และรวมจุดซ้ำของหน่วยงานเดียวกันเป็นแห่งเดียว
 - โค้ดต่อยอดจาก CityMETER · Hotel 0.3.6 (https://github.com/montri-th/hotel @177e592) ผ่าน CityMETER · School 0.1.0
@@ -48,7 +49,7 @@ npm test    # unit tests บนข้อมูลจริง (node --test)
 - `data/area-index.json`, `data/frames/{CODE}.json`, `data/provinces.geojson` — เขต/อำเภอและจังหวัดของ CityMETER production — `scripts/build-boundaries.py`
 - `data/boundary-receipts.json` — ใบรับของทุก response จาก production base info — `scripts/build-receipts.py`
 - `data/building-units/` — แหล่งอาคารราย อปท./เขต จาก CityMETER · Hotel — `scripts/adapt-building-units.py`
-- ไซต์ของหน่วยงาน (อาคารทุกหลังในบริเวณเดียวกัน) เป็นงานวิจัย ยังไม่ขึ้นหน้าเว็บ: `docs/SITES.md` · อาคารรอบหน่วยงานจาก `scripts/site-candidates.mjs` (ผลอยู่ใน `sites/` ไม่ commit)
+- `data/sites.json` — ไซต์ของหน่วยงาน (อาคารทุกหลังในบริเวณเดียวกัน: จุดภายในอาคาร จำนวน วันที่ แหล่ง) จากแท็บ `07_SITE_BOUNDARY_CHECK` ของชีตวิจัย — `scripts/build-sites.py` · สัญญาอนุญาต ODbL 1.0 © OpenStreetMap contributors · วิธีและผล: `docs/SITES.md` · อาคารรอบหน่วยงานจาก `scripts/site-buildings.mjs` (`site-candidates.mjs` ใน container, `sites-browser.js` ในเบราว์เซอร์)
 - วิธีทั้งหมด ข้อจำกัด และงานวิจัยที่ต้องตามต่อ: `DATA_METHOD.md` · กลยุทธ์ผลิตภัณฑ์: `PRODUCT_STATEMENT.md` · สำหรับนักพัฒนา: `handoff/START_HERE.md` · สำหรับ agent: `llms.txt`
 
 ## ตรวจ

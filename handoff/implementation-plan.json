@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.3.0",
+ "productVersion": "0.4.0",
  "updatedOn": "2026-11-06",
  "documentType": "implementation-plan",
  "architecture": {
@@ -12,7 +12,8 @@
    "test": "npm test",
    "lds": "npm run check:lds -- --lds <LDS> --li <LI>",
    "live": "npm run verify:live",
-   "data": "python3 -I scripts/build-data.py …"
+   "data": "python3 -I scripts/build-data.py …",
+   "sites": "python3 -I scripts/build-sites.py --tab <tabs>/07_SITE_BOUNDARY_CHECK.json --sheet-digest <siteTabDigest digest> --read-on <date>"
   },
   "libraries": {
    "maplibre-gl": "5.6.2 (unpkg, pinned)",
@@ -42,6 +43,7 @@
    "js/model.js",
    "js/mvt.js",
    "js/navigation.js",
+   "js/office-building.js",
    "js/panel.js",
    "js/pins.js",
    "js/profile-model.js",
@@ -61,7 +63,8 @@
    "data/frames/{CODE}.json",
    "data/provinces.geojson",
    "data/boundary-receipts.json",
-   "data/building-units/"
+   "data/building-units/",
+   "data/sites.json"
   ]
  },
  "selection": {
@@ -255,7 +258,8 @@
     "T6",
     "T7",
     "T8",
-    "T10"
+    "T10",
+    "T11"
    ],
    "acceptanceCriteria": [
     "A17",
@@ -267,6 +271,32 @@
     "PRODUCT_STATEMENT.md",
     "handoff/",
     "index.html"
+   ],
+   "status": "done"
+  },
+  {
+   "id": "T11",
+   "title": "Office sites (0.4.0): OpenStreetMap area frames matched nationwide, the drawn buildings in them, the site tab of the research sheet, data/sites.json, the whole compound on the map; the School/Temple link prepared",
+   "dependsOn": [
+    "T10"
+   ],
+   "acceptanceCriteria": [
+    "A21",
+    "A22"
+   ],
+   "files": [
+    "scripts/site-buildings.mjs",
+    "scripts/site-candidates.mjs",
+    "scripts/sites-browser.js",
+    "scripts/build-sites.py",
+    "scripts/export-sheet-tabs.js",
+    "data/sites.json",
+    "js/model.js",
+    "js/app.js",
+    "js/panel.js",
+    "docs/SITES.md",
+    "tests/sites.test.js",
+    "tests/site-buildings.test.js"
    ],
    "status": "done"
   },
@@ -394,7 +424,7 @@
   {
    "id": "A17",
    "scenario": "release",
-   "expected": "one cache tag ?v=20261106-r6; one product version 0.3.0; handoff JSON valid",
+   "expected": "one cache tag ?v=20261106-r7; one product version 0.4.0; handoff JSON valid",
    "verificationType": "unit (tests/release.test.js)"
   },
   {
@@ -414,6 +444,18 @@
    "scenario": "audit of the building choice",
    "expected": "every government office in a CityMETER unit audited over V4 (12,736); causes counted; flagged rows listed with the OpenStreetMap comparison",
    "verificationType": "script (scripts/audit-building-choice.mjs) + docs/BUILDING_CHOICE.md"
+  },
+  {
+   "id": "A21",
+   "scenario": "office sites (0.4.0)",
+   "expected": "data/sites.json: checked rows of 07_SITE_BOUNDARY_CHECK only, every key a row of the data, 2+ buildings, each point in Thailand with six decimals within 600 m of the office’s point; no frame, OpenStreetMap element link, note or checker; ODbL 1.0 with the credit; an office with a site draws and frames every building of it (“อาคารในบริเวณหน่วยงาน”), the panel says “ทั้งบริเวณ N อาคาร”, the credit links to the OpenStreetMap copyright page, one provenance line",
+   "verificationType": "unit (tests/sites.test.js) + rendered"
+  },
+  {
+   "id": "A22",
+   "scenario": "site build from the sheet",
+   "expected": "scripts/build-sites.py reads the site tab by column name (a full export or the checked rows of its columns give the same bytes), records the digest and stops when it differs from the one siteTabDigest computes on the sheet’s page, on a building far from its office, outside Thailand, a count that disagrees or an unapproved source; a site of another dataset (go = the row’s key) replaces this sheet’s only when its boundary_source ranks higher",
+   "verificationType": "unit (tests/sites.test.js, python3) + the sheet digest of the release"
   }
  ],
  "developerWorkflow": [
@@ -452,6 +494,21 @@
    "id": "B5",
    "item": "Visitors per office (only with a published source)",
    "evidence": "idea"
+  },
+  {
+   "id": "B8",
+   "item": "Site layouts on official pages (campus-site-join) for the 9 sites in review and the 78 frames past 600 m (osm_polygon+site_layout)",
+   "evidence": "docs/SITES.md §1"
+  },
+  {
+   "id": "B9",
+   "item": "Sites of schools and places of worship made in the School and Temple datasets, linked back with go (build-sites.py --external)",
+   "evidence": "owner 2026-11-06 “เดี๋ยวไว้ไปทำที่ dataset โรงเรียน วัด แล้ว เชื่อมกลับมาอีกที”"
+  },
+  {
+   "id": "B10",
+   "item": "A production run of the frames from a dated Thailand OpenStreetMap extract (Geofabrik + osmium) instead of Overpass",
+   "evidence": "skill osm-area-site-join"
   }
  ]
 }

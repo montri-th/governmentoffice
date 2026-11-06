@@ -8,11 +8,11 @@ Winning strategy ของชุดข้อมูลนี้ เขียน�
 |---|---|
 | Parent product | CityMETER (City Intelligence Base Layer ของ Landometer) · แกน Location (ทะเบียนกลาง `research.TH.government_office` / Location / TH) · production dataset code `governmentOfficer` (`https://landometer.com/v3/citymeter?d=governmentOfficer`, API `government-agency`) |
 | Feature / dataset | Government Office — หน่วยงานรัฐและบุคลากรที่ production บันทึก ทั่วประเทศไทย ระดับเขต/อำเภอ พร้อมหมวดและประเภทของ production บริการรัฐที่ใกล้ที่สุดรอบจุด บริบทรถไฟฟ้า และสำนักงานที่ย้ายหรือเปิดใหม่ |
-| รุ่นเอกสาร | 0.3.0 · 6 พฤศจิกายน 2569 |
-| สถานะ | Public demo รุ่น 0.3.0 บน GitHub Pages (`https://montri-th.github.io/governmentoffice/`); ชุดข้อมูลเป็นรายชื่อรอยืนยันของทีมวิจัยจาก production ไม่ใช่ทะเบียนหน่วยงานราชการอย่างเป็นทางการ |
+| รุ่นเอกสาร | 0.4.0 · 6 พฤศจิกายน 2569 |
+| สถานะ | Public demo รุ่น 0.4.0 บน GitHub Pages (`https://montri-th.github.io/governmentoffice/`); ชุดข้อมูลเป็นรายชื่อรอยืนยันของทีมวิจัยจาก production ไม่ใช่ทะเบียนหน่วยงานราชการอย่างเป็นทางการ |
 | ผู้รับผิดชอบ | Landometer · CityMETER (owner: Montri) |
 | ผู้ใช้หลัก | ทีมพัฒนาโครงการและนักลงทุนที่ดิน · ทีมเลือกทำเลค้าปลีกและบริการ · จังหวัด อปท. และหน่วยงานที่วางแผนจุดบริการ · ผู้ประเมินมูลค่าและสถาบันการเงิน (**Hypothesis**, §2.1) |
-| ชุดข้อมูลที่ใช้ร่วม | CityMETER · Transit (สถานีราง release `transit-data-2026-10-31-r1`, `meta.context.rail`) · หน่วยอาคารของ CityMETER · Hotel (CityMETER Building V4 ใน อปท./เขตที่ประเมินแล้ว นอกนั้น OpenStreetMap, `data/building-units/`) · ลิงก์ไป CityMETER · School เมื่อเลือกหมวดการศึกษา |
+| ชุดข้อมูลที่ใช้ร่วม | CityMETER · Transit (สถานีราง release `transit-data-2026-10-31-r1`, `meta.context.rail`) · หน่วยอาคารของ CityMETER · Hotel (CityMETER Building V4 ใน อปท./เขตที่ประเมินแล้ว นอกนั้น OpenStreetMap, `data/building-units/`) · ลิงก์ไป CityMETER · School เมื่อเลือกหมวดการศึกษา · ไซต์ของหน่วยงานจากกรอบพื้นที่ OpenStreetMap (© OpenStreetMap contributors, ODbL; `data/sites.json`, 0.4.0) |
 | แหล่งข้อมูล / วิธี (สรุป) | ชีตวิจัย `CityMETER Government Office Thailand — รายชื่อรอยืนยัน 2026-11-05` ที่ทีมวิจัยรวบรวมจาก CityMETER Government Officer ใน production ทีละจุด (440,005 UUID) พร้อมรายชื่อหน่วยงานของ OPDC/DGA และเหตุการณ์ย้ายหรือเปิดใหม่พร้อมประกาศ; หนึ่งแถว = หนึ่งจุดของ production (440,005 จุด เท่ากับ production; รุ่น 0.2.0 ตามที่เจ้าของขอ 6 พ.ย. 2569 “อยากได้ทั้งสี่แสนจุด”) (`DATA_METHOD.md` §1–3) |
 | ข้อมูลตรวจถึง | 6 พ.ย. 2569 (`meta.checkedOn`) · ชีตแก้ล่าสุด 6 พ.ย. 2569 03:51 UTC · อ่านและสร้างข้อมูล 6 พ.ย. 2569 (`meta.readOn`, `meta.builtOn`) · ตรงกับยอดของ production รายเขต × หมวดทุกช่อง (`meta.reconciliation`) |
 
@@ -87,7 +87,7 @@ Winning strategy ของชุดข้อมูลนี้ เขียน�
 1. เปิดหน้า → เมือง 3 มิติของอำเภอที่มีหน่วยงานรัฐมากที่สุด พร้อมข้อค้นพบ (สัดส่วน ตัวตั้ง ตัวหาร พื้นที่อันดับ 1 นอกจังหวัด)
 2. สลับ “หน่วยงาน | บุคลากร” หรือเลือกหมวด/ประเภท/จังหวัด → แผนที่ ป้าย ข้อค้นพบ อันดับ และกราฟเปลี่ยนพร้อมกัน
 3. กดอำเภอ → อันดับ สัดส่วนของจังหวัด หมวด ประเภท การย้ายในพื้นที่ รายชื่อหน่วยงาน
-4. กดหน่วยงาน → มุมมองอาคาร 2-point perspective · ประเภท บุคลากร ต้นสังกัด การย้าย บริการรัฐที่ใกล้ที่สุด หน่วยงานรอบ 2 กม. ภูมิประเทศ
+4. กดหน่วยงาน → มุมมองอาคาร 2-point perspective (หน่วยงานที่รู้บริเวณ: อาคารทั้งบริเวณ “ทั้งบริเวณ N อาคาร”) · ประเภท บุคลากร ต้นสังกัด การย้าย บริการรัฐที่ใกล้ที่สุด หน่วยงานรอบ 2 กม. ภูมิประเทศ
 5. กดสถานี → หน่วยงานในรัศมี 500 ม. และบริการรัฐที่ใกล้สถานีที่สุด
 6. ถามต่อใน Google หรือเปิดพื้นที่เดียวกันใน CityMETER production
 

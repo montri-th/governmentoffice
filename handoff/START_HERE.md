@@ -1,6 +1,6 @@
 # CityMETER Government Office — Developer Handoff
 
-รุ่นเผยแพร่ 0.3.0 · 6 พ.ย. 2569 (ทุกจุดของ production 440,005 จุด ทุกหมวดตั้งแต่หน้าแรก · อาคารของหน่วยงานเลือกใหม่และ Street View หันเข้าหาอาคาร — `docs/BUILDING_CHOICE.md`) · ชีตวิจัย “CityMETER Government Office Thailand — รายชื่อรอยืนยัน 2026-11-05” อ่านและสร้างข้อมูล 6 พ.ย. 2569
+รุ่นเผยแพร่ 0.4.0 · 6 พ.ย. 2569 (ทุกจุดของ production 440,005 จุด ทุกหมวดตั้งแต่หน้าแรก · อาคารของหน่วยงานเลือกใหม่และ Street View หันเข้าหาอาคาร — `docs/BUILDING_CHOICE.md` · ไซต์ของหน่วยงาน 255 แห่ง แผนที่แสดงอาคารทั้งบริเวณ — `docs/SITES.md`, `data/sites.json`) · ชีตวิจัย “CityMETER Government Office Thailand — รายชื่อรอยืนยัน 2026-11-05” อ่านและสร้างข้อมูล 6 พ.ย. 2569
 
 เริ่มอ่าน `source/handoff/README.md` จากนั้น Product Statement (`source/PRODUCT_STATEMENT.md` + `source/handoff/product-statement.json`), Product Brief และ Implementation Plan ในโฟลเดอร์ `source/handoff` ทั้ง `.md` และ `.json` ใช้คู่กัน
 

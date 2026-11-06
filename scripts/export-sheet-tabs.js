@@ -21,6 +21,7 @@
  *   await exportSheetTabs([{name: '06_RECENT_PROD_GAPS', gid: 73110606}, {name: '01_AGENCIES', gid: 102}], {into: 'page'});
  *   await exportCompactTab({name: '05_PRODUCTION_ROWS', gid: 73110605}); showCompactPage(0); … showCompactPage(n − 1);
  *   await exportTabLinks({name: '06_RECENT_PROD_GAPS', gid: 73110606}, {into: 'page'});
+ *   await siteTabDigest({name: '07_SITE_BOUNDARY_CHECK', gid: <gid>});  // scripts/build-sites.py --sheet-digest
  *
  * Long runs: a console call may outlive a tool's time limit; run it in the background
  * (`window.__cms = exportSheetTabs(...)`) and read `window.__cmsProgress` until it settles.
@@ -203,6 +204,38 @@
     return window.__cmsProgress;
   }
 
+  /**
+   * The site tab's digest for scripts/build-sites.py (docs/SITES.md): the cells of SITE_COLUMNS of the rows whose
+   * boundary_status is `checked`, in the tab's order. digest = SHA-256 of [SITE_COLUMNS, …those rows] as canonical JSON
+   * (the build's --sheet-digest: equal digests = the build read what the sheet holds). tsvSha256 = SHA-256 of the whole
+   * tab as text (header first, cells joined by a tab, rows by a line break) — the text that was pasted, when it is.
+   * window.__cmsSites.lines: one "office_key|building_source|buildings_count|sha256(buildings_in_boundary) first 6" per
+   * checked row (showBlock it for a reader tool, to find a row that differs).
+   */
+  const SITE_COLUMNS = ['office_key', 'boundary_status', 'boundary_source', 'boundary_evidence_url', 'buildings_in_boundary',
+    'buildings_count', 'building_source', 'checked_on'];
+  async function siteTabDigest({name, gid}, {show = false} = {}) {
+    const all = (await readTab(gid)).filter(r => r.some(c => c !== '')); // the HTML view's frozen-row bar is an empty row
+    const header = all[0] || [];
+    let width = header.length;
+    while (width && header[width - 1] === '') width--;
+    const idx = SITE_COLUMNS.map(c => header.indexOf(c));
+    const missing = SITE_COLUMNS.filter((c, i) => idx[i] < 0);
+    if (missing.length) throw new Error(`${name}: no column ${missing.join(', ')}`);
+    const body = all.slice(1), counts = {};
+    for (const r of body) counts[r[idx[1]]] = (counts[r[idx[1]]] || 0) + 1;
+    const checked = body.filter(r => r[idx[1]] === 'checked').map(r => idx.map(i => r[i] ?? ''));
+    const lines = [];
+    for (const r of checked) lines.push([r[0], r[6], r[5], (await sha256Hex(r[4])).slice(0, 6)].join('|'));
+    window.__cmsSites = {lines: lines.join('\n')};
+    if (show) showBlock(window.__cmsSites.lines);
+    return {name, gid, rows: body.length, columns: width, counts, checked: checked.length,
+      digest: await sha256Hex(JSON.stringify([SITE_COLUMNS, ...checked])),
+      tsvSha256: await sha256Hex([header, ...body].map(r => r.slice(0, width).join('\t')).join('\n')),
+      linesSha256: await sha256Hex(window.__cmsSites.lines)};
+  }
+
+  window.siteTabDigest = siteTabDigest;
   window.exportCompactTab = exportCompactTab;
   window.showCompactPage = showCompactPage;
   window.exportTabLinks = exportTabLinks;

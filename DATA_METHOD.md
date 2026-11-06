@@ -25,6 +25,7 @@ points of one office as one row.
 - **ย้ายและเปิดใหม่** = เหตุการณ์ 2567–2569 ที่ทีมวิจัยพบว่า production ยังไม่มีที่ตั้งใหม่: ย้ายที่ตั้ง · เปิดอาคารสำนักงานใหม่ · เปิดสำนักงานใหม่ · เปิดจุดบริการ พร้อมวันที่ตามประกาศ ความหมายของวันที่ และลิงก์ประกาศ “จุดเดิมใน CityMETER” = แถวของ production ที่ชีตระบุว่าเหตุการณ์นั้นแทน
 - **อาคาร** = อาคารบนแผนที่ (CityMETER Building V4 หรือ OpenStreetMap ตามพื้นที่) ความสูง “สูงราว” เป็นค่าประมาณของชุดข้อมูล “หน่วยงานในอาคารนี้” = หมุดของหน่วยงานอยู่ในขอบอาคาร หมุดคือจุดของ production ไม่ใช่ทางเข้าหรือขอบเขตที่ดิน
 - **อาคารใกล้หมุด** = เมื่อหมุดไม่อยู่ในขอบอาคารใด มุมมองอาคาร 3 มิติเปิดที่อาคารบนแผนที่ที่ใกล้หมุดที่สุดภายใน 300 ม. (ไม่มีก็ขยายเป็น 800 ม.) โดยมีหมุดในภาพ เป็นการเลือกมุมกล้องเท่านั้น
+- **ทั้งบริเวณ N อาคาร** = อาคารบนแผนที่ทุกหลังในบริเวณของหน่วยงาน ตามกรอบพื้นที่ใน OpenStreetMap ที่ตรงทั้งที่ตั้ง ชื่อ ประเภท และเลขหน่วยของหน่วยงาน (ห่างหมุดไม่เกิน 600 ม.) แผนที่ระบายทุกหลังและหันกล้องให้เห็นทั้งบริเวณพร้อมหมุด (“อาคารในบริเวณหน่วยงาน”) เป็นการจัดกลุ่มอาคารเพื่อดูบนแผนที่ ไม่ใช่โฉนด เนื้อที่ หรือกรรมสิทธิ์ · กรอบพื้นที่ © OpenStreetMap contributors (ODbL)
 - **ภูมิประเทศ** = พื้นดินรอบหมุด (รัศมี 500 ม. ต้นไม้ 300 ม.) จาก SRTM 30 ม. (สำรวจปี 2543) และแผนที่ OSM ไม่ใช่การประเมินความเสี่ยง
 - **สถานีที่กำลังสร้าง** = โครงการ ยังไม่ใช่บริการ
 
@@ -39,6 +40,7 @@ points of one office as one row.
 | District outlines | `data/frames/{CODE}.json` (production SUBDISTRICT geometry dissolved to districts, from montri-th/pharmacy, as in Hotel and School) | Yes (display geometry) |
 | CityMETER · Transit | Rail stations (montri-th/transit @5f5232d0, `data/transit.json` SHA-256 0916636a…, release `transit-data-2026-10-31-r1`) | The stations the page draws or names (`stations`) |
 | Building units | `data/building-units/` copied from CityMETER · Hotel (montri-th/hotel @177e592f) by `scripts/adapt-building-units.py` (§10) | Yes |
+| Site tab `07_SITE_BOUNDARY_CHECK` of the research sheet (0.4.0) | Office sites: OpenStreetMap area frames (Overpass, OSM data of 2026-11-06) matched to offices by place and name, with one interior point per drawn building inside (`docs/SITES.md`) | The `checked` rows' points, counts, dates and sources (`data/sites.json`, bound by the digest the sheet's page computes; ODbL 1.0, © OpenStreetMap contributors); never the frames |
 
 The sheet is too large for a Drive export: every tab was read from the sheet's own HTML view in the owner's browser
 (`scripts/export-sheet-tabs.js`; `05_PRODUCTION_ROWS` in its compact form, rebuilt by `scripts/join-compact-payload.py`,
@@ -157,16 +159,26 @@ camera follow the Hotel 0.3.x contracts. The building the camera turns to for an
 `js/office-building.js` — an OpenStreetMap point of interest named as the office, the pin, the distance, the side of
 the street, the type's footprint floor and the setback — never the building holding the pin just because it holds it;
 Street View stands on the street in front of that building, facing it. Method, causes, accuracy and the audit of every
-government office in a CityMETER unit: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`. Office sites —
-the other buildings of an office's compound, grouped from OpenStreetMap area frames — are research only and not on the
-page (`docs/SITES.md`; building points from `scripts/site-candidates.mjs`).
+government office in a CityMETER unit: `docs/BUILDING_CHOICE.md`, `handoff/building-choice-audit.json`.
+
+**Office sites (0.4.0, `data/sites.json`, `docs/SITES.md`).** For 255 offices and campuses (142 government offices,
+113 universities and colleges) the other buildings of the compound are known: an OpenStreetMap area of the office,
+matched by place and by name (kind and unit number agreeing), and the buildings the map draws whose interior point
+stands in it — 6,757 buildings, each published as one point well inside it, within 600 m of the office's point. Opening
+such an office draws every building of the site in the data colour and frames them with the pin (“อาคารในบริเวณ
+หน่วยงาน”); the panel says “ทั้งบริเวณ N อาคาร”; Street View still faces the office's own building. A site is a display
+grouping — never a deed, a parcel, a land area or ownership. Rows live in the research sheet's tab
+`07_SITE_BOUNDARY_CHECK` (only `checked` rows are published; the frame stays in the sheet). The site groups derive from
+OpenStreetMap (© OpenStreetMap contributors) and are offered under the ODbL 1.0; the credit and its link sit in the
+office's sources and provenance line.
 
 ## 11. Not published
 
 Telephone numbers, e-mail addresses, postal addresses and websites of 05; full production UUIDs and office ids;
 overlay subdistrict ids; researcher summaries and gap reasons of 06; private sheet links; map links and coordinate
 sources; the `02_OFFICE_CANDIDATES` rows (a DOPA/BMA name list with repeats, not offices); the contact addresses and
-evidence ids of `01_AGENCIES` (`meta.excludedFields`). Source links are public https pages only, never the production
+evidence ids of `01_AGENCIES` (`meta.excludedFields`); of the site tab, the frames, the OpenStreetMap element links,
+the match tiers, the notes and the checker (`data/sites.json` `meta.excludedFields`). Source links are public https pages only, never the production
 API, a private copy or the private production repository.
 
 ## 12. Research follow-ups (reported, not patched in `data/`)
@@ -201,4 +213,6 @@ python3 -I scripts/build-boundaries.py --pharmacy <montri-th/pharmacy checkout> 
 python3 -I scripts/build-data.py --tabs <tabs> --api <api> --index data/area-index.json --transit <montri-th/transit checkout> --out .
 # 4. Building units from a montri-th/hotel checkout
 python3 -I scripts/adapt-building-units.py --hotel <hotel checkout> --commit <hotel commit> --out data/building-units
+# 5. Office sites from the site tab (docs/SITES.md §6): siteTabDigest + exportSheetTabs on the sheet's page, then
+python3 -I scripts/build-sites.py --tab <tabs>/07_SITE_BOUNDARY_CHECK.json --sheet-digest <digest> --read-on <date>
 ```

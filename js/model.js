@@ -235,6 +235,38 @@ export function decodeDataset(json, index) {
   return data;
 }
 
+/** The credit OpenStreetMap asks for (ODbL 1.0) wherever its areas or buildings made a site. */
+export const OSM_CREDIT = Object.freeze({credit: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright', licence: 'ODbL-1.0'});
+
+/**
+ * Office sites (data/sites.json, docs/SITES.md, owner 2026-11-06 “อนุมัติ ทุกข้อ”): the buildings of an office's
+ * compound as one interior point each, from the research sheet's site tab (or a site of another CityMETER dataset that
+ * names the row, `x` → meta.external); the boundary itself stays in the sheet.
+ * → Map(office key → {points, n, on, src, source, buildings, url, via, credit, creditUrl, licence}); fewer than 2
+ * buildings is not a site. url: the project's public layout page (sites checked against it); via: the other dataset.
+ */
+export function decodeSites(json) {
+  const m = json?.meta || {}, out = new Map();
+  for (const [key, s] of Object.entries(json?.sites || {})) {
+    if (!Array.isArray(s?.pts) || s.pts.length < 2 || !s.pts.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) continue;
+    const ext = Number.isInteger(s.x) ? m.external?.[s.x] || null : null;
+    const osm = /^osm_/.test(s.src || '') || s.b === 'osm_buildings';
+    out.set(key, Object.freeze({points: s.pts, n: s.n || s.pts.length, on: s.on || '', src: s.src || '', source: m.sources?.[s.src] || '',
+      buildings: m.buildingSources?.[s.b] || '', url: safeURL(s.url || ''), via: ext ? ext.datasetTh || ext.dataset || '' : '',
+      credit: osm ? m.credit || OSM_CREDIT.credit : ext?.credit || '', creditUrl: osm ? safeURL(m.creditUrl || '') || OSM_CREDIT.url : '',
+      licence: osm ? m.licence || OSM_CREDIT.licence : ext?.licence || ''}));
+  }
+  return out;
+}
+
+/** Give the rows from index `from` on their site (`row.site`); returns how many found one. */
+export function attachSites(rows, sites, from = 0) {
+  let n = 0;
+  if (!sites?.size) return n;
+  for (let i = from; i < rows.length; i++) { const s = sites.get(rows[i].id); if (s) { rows[i].site = s; n++; } }
+  return n;
+}
+
 /** Importance of every loaded row (labels): one pass over the whole dataset. */
 export function rankRows(data) {
   const scores = importanceScores(data.rows);

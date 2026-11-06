@@ -51,7 +51,7 @@
  * Panel modes: overview (+ type card with a ประเภท filter) | area | station | building | office (with a back stack).
  * URL state: filters, metric, area, areas, view, office, station, view3d.
  */
-import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, appendGroupRows, rankRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, scopeValue, SCOPE_ALL, SCOPE_OFFICES} from './model.js';
+import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, decodeSites, attachSites, appendGroupRows, rankRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, scopeValue, SCOPE_ALL, SCOPE_OFFICES} from './model.js';
 import {buildAreaIndex, areaWord, areaLocator, recordBounds} from './areas.js';
 import {summarizeAreaInsight, filterAreaRows} from './area-insight.js';
 import {renderInsightChart} from './charts.js';
@@ -63,7 +63,7 @@ import {createFrameStore, provinceLocator} from './frames.js';
 import {buildOverview, buildAreaProfile, buildOfficeDetail, buildBuildingProfile, buildTypeProfile, buildStationProfile, stationsOf, listOrder, STATION_RADIUS_M} from './profile-model.js';
 import {renderOverview, renderArea, renderBuilding, renderOffice, renderStation, renderTypeCard, renderFilterChips, terrainChipsHTML, subLine, esc, num, pct, words, meters, staffText} from './panel.js';
 import {installStationLayer} from './stations.js';
-import {joinBuildings} from './building-join.js';
+import {joinBuildings, buildingsAtPoints} from './building-join.js';
 import {chooseBuilding, streetViewOf, normaliseName} from './office-building.js';
 import {buildMapStyle, basemapPalette, TILEJSON_URL, MASSING_BEFORE, VENUE_XRAY_BEFORE} from './map-style.js';
 import {installMassing, outerRings} from './massing.js';
@@ -693,6 +693,27 @@ function choiceOf(r) {
 }
 
 /**
+ * The drawn buildings of the open office's site (data/sites.json, js/building-join.js#buildingsAtPoints), per join and
+ * pieces; null for an office without a site (Hotel 0.3.6 stay sites, docs/SITES.md).
+ */
+function siteOf(r) {
+  if (!r?.site) return null;
+  const join = state.join, pieces = state.massing?.buildings() || [];
+  if (siteOf.id !== r.id || siteOf.join !== join || siteOf.pieces !== pieces) {
+    Object.assign(siteOf, {id: r.id, join, pieces});
+    siteOf.value = join ? buildingsAtPoints(pieces, r.site.points, join.keyOfPiece) : null;
+  }
+  return siteOf.value;
+}
+
+/** Half-size (m) of the square round the office's pin that holds every building of its site, with a margin; 0 without one. */
+function siteReach(r) {
+  if (!r?.site?.points?.length || !hasPoint(r)) return 0;
+  const kx = 111320 * Math.cos((r.latitude * Math.PI) / 180), ky = 110574;
+  return 80 + Math.max(...r.site.points.map(([lon, lat]) => Math.max(Math.abs(lon - r.longitude) * kx, Math.abs(lat - r.latitude) * ky)));
+}
+
+/**
  * The building being looked at: the open building; else the building of the open office (choiceOf): `near` when the
  * pin does not fall in it (“อาคารใกล้หมุด”), `why` 'name' when its name on the map decided it (“อาคารตามชื่อบนแผนที่”) —
  * a camera choice, never a join.
@@ -712,6 +733,11 @@ function focusTarget() {
     const r = rowById(id);
     if (!hasPoint(r)) return null;
     const pick = choiceOf(r);
+    // An office with a site (docs/SITES.md): every drawn building of its compound, framed together with the pin;
+    // Street View still faces the building choiceOf picks (`main`).
+    const site = siteOf(r);
+    if (site?.refs.length) return {id: `office:${r.id}`, key: `site:${r.id}`, refs: site.refs, anchor: [r.longitude, r.latitude], near: false, why: 'site',
+      poi: null, distanceM: null, site: {n: site.keys.length}, main: pick?.key ? of(pick.key) : null};
     return {id: `office:${r.id}`, ...of(pick?.key), anchor: [r.longitude, r.latitude], near: Boolean(pick && !pick.inside), why: pick?.why || '',
       poi: pick?.poi || null, distanceM: pick?.distanceM ?? null};
   }
@@ -723,6 +749,7 @@ function focusTarget() {
  * ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): on the street in front of it, turned to it; null while no building is known.
  */
 function streetViewTarget(target = focusTarget()) {
+  if (target?.site && target.main?.refs?.length) target = {...target, refs: target.main.refs};
   if (!target?.refs?.length) return null;
   const pieces = state.massing?.buildings() || [], roads = state.massing?.roads?.() || [];
   const key = `${target.id}|${target.refs.join(',')}|${state.massing?.version ?? 0}`;
@@ -762,7 +789,7 @@ function focusShape(target = focusTarget()) {
   if (!points.length) points = rings.flatMap(({ring, height}) => ring.flatMap(([lng, lat]) => [[lng, lat, 0], [lng, lat, height]]));
   // The building nearest the pin is framed with the pin, so the office's symbol stays in view beside it.
   // A building chosen by its name far from a stray pin (> FRAME_PIN_M) is framed alone: the pin would shrink it to a dot.
-  if (points.length && target?.near && !(target.distanceM > FRAME_PIN_M)) points = [...points, terrain ? [target.anchor[0], target.anchor[1], 0, pinGround] : [target.anchor[0], target.anchor[1], 0]];
+  if (points.length && (target?.site || (target?.near && !(target.distanceM > FRAME_PIN_M)))) points = [...points, terrain ? [target.anchor[0], target.anchor[1], 0, pinGround] : [target.anchor[0], target.anchor[1], 0]];
   if (!points.length && target) {
     // Not known yet: a 90 m box round the point (12 m tall), framed the same way.
     const [lon, lat] = target.anchor, dLat = 45 / 110574, dLng = 45 / (111320 * Math.cos((lat * Math.PI) / 180));
@@ -926,7 +953,7 @@ function applyJoin() {
   document.querySelector('.map-panel')?.classList.toggle('has-open-building', state.blueBuildings);
   const label = $('legend-building-label');
   const t = focusTarget();
-  if (label) label.textContent = currentBuilding() ? 'อาคารที่เปิด' : t?.why === 'name' ? 'อาคารตามชื่อบนแผนที่' : t?.near ? 'อาคารใกล้หมุด' : 'อาคารที่หมุดตก';
+  if (label) label.textContent = currentBuilding() ? 'อาคารที่เปิด' : t?.why === 'site' ? 'อาคารในบริเวณหน่วยงาน' : t?.why === 'name' ? 'อาคารตามชื่อบนแผนที่' : t?.near ? 'อาคารใกล้หมุด' : 'อาคารที่หมุดตก';
   if (panelSpatialSig() !== state.renderedSig) renderPanel();
   syncFocusBuilding();
   refitOnNewBuilding();
@@ -1002,6 +1029,7 @@ function ensureGroups(value, {onFile = null} = {}) {
         const n = appendGroupRows(state.data, json, state.index, {rank: false});
         if (n !== g.rows) console.warn('Group rows differ from the dataset count', g.id, n, g.rows);
         for (let i = before; i < state.data.rows.length; i++) state.rowById.set(state.data.rows[i].id, state.data.rows[i]);
+        attachSites(state.data.rows, state.sites, before);
         provinceScopeRows.key = '';
       }).finally(() => state.loading.delete(g.id));
       state.loading.set(g.id, job);
@@ -1482,7 +1510,7 @@ function massingRegions() {
   }
   if (state.panel.mode === 'office') {
     const r = rowById(state.panel.id);
-    if (hasPoint(r)) return [squareAround(r.longitude, r.latitude, officeReach(r.id))];
+    if (hasPoint(r)) return [squareAround(r.longitude, r.latitude, Math.max(officeReach(r.id), siteReach(r)))];
     const a = r?.area ? areaById(r.area) : null;
     if (a?.feature) return outerRings(a.feature);
   }
@@ -1522,7 +1550,7 @@ function updateSpatialLayers() {
     const zones = state.buildingUnits?.zonesFor(regions) || [];
     // Which office region this request reads (widenOfficeReach acts only on a result of the office's own region).
     const r = state.panel.mode === 'office' ? rowById(state.panel.id) : null;
-    state.massingFor = hasPoint(r) ? `office:${r.id}:${officeReach(r.id)}` : '';
+    state.massingFor = hasPoint(r) ? `office:${r.id}:${Math.max(officeReach(r.id), siteReach(r))}` : '';
     state.massing?.update({regions, hosts: [], anchors, zones, enabled: true, city: state.view3d, zoom: state.map.getZoom(), latitude: state.map.getCenter().lat})?.catch(e => console.warn('Massing', e));
   }
   applyJoin();
@@ -2051,10 +2079,11 @@ function wireEvents() {
 
 async function init() {
   try {
-    const [rowsJSON, indexJSON, provincesJSON] = await Promise.all([
+    const [rowsJSON, indexJSON, provincesJSON, sitesJSON] = await Promise.all([
       fetchJSON('data/offices.json', {timeout: 30000}),
       fetchJSON('data/area-index.json', {timeout: 30000}),
       fetchJSON('data/provinces.geojson', {timeout: 30000}).catch(e => { console.warn('Province frames unavailable', e); return null; }),
+      fetchJSON('data/sites.json', {timeout: 30000}).catch(e => { console.warn('Office sites unavailable', e); return null; }),
     ]);
     if (!Array.isArray(indexJSON?.provinces) || !indexJSON.provinces.length || !Array.isArray(indexJSON?.areas?.id)) {
       const e = new Error('Invalid area index'); e.resource = 'data/area-index.json'; e.phase = 'data-schema'; throw e;
@@ -2063,6 +2092,8 @@ async function init() {
     state.index = buildAreaIndex(indexJSON);
     state.provincesGeo = validFeatureCollection(provincesJSON) ? provincesJSON : {type: 'FeatureCollection', features: []};
     state.data = decodeDataset(rowsJSON, state.index);
+    state.sites = decodeSites(sitesJSON);
+    attachSites(state.data.rows, state.sites);
     state.stationById = new Map(state.data.stations.map(s => [s.id, s]));
     if (state.data.dropped) console.warn('Rows outside the area index', state.data.dropped);
     state.rowById = new Map(state.data.rows.map(r => [r.id, r]));

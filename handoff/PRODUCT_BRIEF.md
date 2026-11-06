@@ -1,4 +1,4 @@
-# CityMETER Government Office — Product Brief (0.3.0)
+# CityMETER Government Office — Product Brief (0.4.0)
 
 คู่กับ `product-brief.json` (ค่าที่เครื่องตรวจได้) — เอกสารนี้สรุปสัญญาสำหรับคนอ่าน
 

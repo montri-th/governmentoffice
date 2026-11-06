@@ -1,13 +1,14 @@
-# CityMETER Government Office 0.3.0 — verification
+# CityMETER Government Office 0.4.0 — verification
 
-Release 0.3.0 (cache tag `20261106-r6`), built 2026-11-06. 0.3.0 answers the owner's requests of 2026-11-06 on the
-Juvenile and Family Court of Ubon Ratchathani (“ทำไมจุดในภาพถึงเลือกอาคารผิด … อยากให้พี่หาเคสที่ spatial join ผิดให้เจอว่า
-มีรายการไหนบ้าง มีสาเหตุกี่แบบ แต่ละแบบควรแก้อย่างไรถึงจะดีที่สุด แล้วลงมือปรับแก้ให้เรียบร้อยทั้งหมด”, “streetview ถ้าเลือกแล้ว
-ต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the building the camera turns to for an office (`js/office-building.js`,
-`docs/BUILDING_CHOICE.md`) and Street View facing it. The data files are 0.2.0's byte for byte, so §1 is 0.2.0's build
-record; 0.2.0 itself answered “ทำไมมีแค่ 19,721 แห่งไม่ใช่สี่แสนครับ งง อยากได้ทั้ง สี่แสนจุดจะได้มั้ย” (every production point a
-row, every group by default). The code base is CityMETER · Hotel 0.3.6 (montri-th/hotel @177e592f) through CityMETER ·
-School 0.1.0; the contracts they share were verified there and are carried unchanged except the building of an office.
+Release 0.4.0 (cache tag `20261106-r7`), built 2026-11-06. 0.4.0 answers the owner's requests of 2026-11-06 “ใช้วิธีนี้
+และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม osm-area-site-join และ campus-site-join” and “เรียงลำดับแบบฉลาดนะ เอาแบบ quick win … แค่ให้
+ครอบคลุมทั้งประเทศ”, with the decisions “อนุมัติ ทุกข้อ” · “OK” · “OK” · “ยังไม่ต้อง … เตรียมเชื่อมไว้ละกัน”: an office's site —
+every drawn building of its compound — from the research sheet's new tab `07_SITE_BOUNDARY_CHECK` (`data/sites.json`,
+`docs/SITES.md`), shown on the map as one site. 0.3.0 (the building the camera turns to, Street View facing it) and 0.2.0
+(every production point a row) are unchanged; `data/offices.json` and the group files are 0.2.0's byte for byte, so §1
+is 0.2.0's build record. The code base is CityMETER · Hotel 0.3.6 (montri-th/hotel @177e592f) through CityMETER · School
+0.1.0; the contracts they share were verified there and are carried unchanged except the building of an office and the
+office's site.
 
 ## 1. Data build (0.2.0, unchanged) — every reconciliation passes
 
@@ -26,7 +27,7 @@ School 0.1.0; the contracts they share were verified there and are carried uncha
 - 97 events of `06_RECENT_PROD_GAPS` with dates and public https announcements; 18 linked to the production row they
   replace; map links and coordinate sources dropped. No open problem (`meta.problems` empty).
 
-## 2. Unit tests on the real data — 142 pass, 0 fail
+## 2. Unit tests on the real data — 152 pass, 0 fail
 
 `npm test` (Node 22): data contract (one row per point, the default scope = every group, `offices`, the 0.1.0 `all`,
 group files by bytes and SHA-256, repeated points and personnel once, personnel rules, types, membership, points,
@@ -38,10 +39,31 @@ breadcrumb · categorical cues · labels and pins · scales · icon fonts · cam
 MapLibre guards (carried from Hotel) · the building of an office (0.3.0, `tests/office-building.test.js`: the court case,
 a pin in a building of the type's size, a police box, a pin in the open, the street side and the setback, named points of
 interest and the kinds that can lend a name, a stray pin and the office's own name, grouping, Thai names, Street View on
-the street in front facing the building, the link's heading and pitch) · release (one cache tag, one version,
+the street in front facing the building, the link's heading and pitch) · office sites (0.4.0, `tests/sites.test.js`:
+`data/sites.json` against the data, decoding, the panel chip and credit, `build-sites.py` on made-up tabs — the reduced read,
+the sheet digest, the stops, the School/Temple link; `tests/site-buildings.test.js`: the candidates of both building
+sources) · release (one cache tag, one version,
 schema-valid handoff JSON, hygiene).
 
-## 3. The building of an office (0.3.0)
+## 3. Office sites (0.4.0)
+
+- Frames: OpenStreetMap areas round 15,942 government offices and 1,266 universities and colleges (Overpass, OSM data of
+  2026-11-06 12:01–12:20 UTC, in the owner's browser), matched by place and name with the dataset's checks (kind, unit
+  number, part words); 381 offices and campuses took a frame (`own` 246 · `near_named` 99 · `own_family` 36).
+- Buildings (`scripts/sites-browser.js` on this repository's page, `scripts/site-buildings.mjs`): each frame fetched by id
+  at the date it was matched; CityMETER Building V4 inside a CityMETER unit, OpenStreetMap buildings elsewhere; a building
+  belongs when its interior point stands in the frame. The container's own run (`site-candidates.mjs`) gave the same
+  members for all 254 V4 sites (in 6 of them one interior point lies 0.1–0.5 m from the browser's, inside the same
+  building — the browser's points, which the sheet holds, are published).
+- The tab: the run's 381 rows pasted into the new tab `07_SITE_BOUNDARY_CHECK` of the research sheet (plain-text cells),
+  read back from the sheet's own HTML view (`siteTabDigest`): 381 rows × 16 columns, the whole tab's text SHA-256
+  `8ac6dd2b…` = the pasted text; `checked` 255 · `too_big` 78 · `frame_only` 27 · `single_building` 12 · `review` 9; digest
+  of the checked rows `fbd4065a…` = the build's input (`scripts/build-sites.py --sheet-digest` stops otherwise).
+- `data/sites.json`: 255 sites (142 government offices, 113 campuses), 6,757 buildings (241 sites over V4, 14 over
+  OpenStreetMap buildings), every point in Thailand, six decimals, within 600 m of its office's point; ODbL 1.0 with the
+  credit; no frame, OpenStreetMap element link, tier, note or checker.
+
+## 3b. The building of an office (0.3.0)
 
 - Audit (`scripts/audit-building-choice.mjs`): CityMETER Building V4 read at z16 round every government office whose
   150 m square meets a CityMETER unit — 12,736 offices, 20,658 tile requests (101 MB) to the production tile API at 4 at
@@ -66,6 +88,15 @@ so the Hotel parity run (124 checks against the LDS base file and the Location I
 The quiet context dots now read the hollow flag (`h`), so a place is a filled grey dot like its focus symbol.
 
 ## 5. Rendered QA and performance (build container)
+
+0.4.0: local page in Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap answered with an empty tile set
+(unreachable here), CityMETER Building V4 live. `?office=304e6e8f19` (สำนักงานตำรวจแห่งชาติ, 21 buildings), 1440 × 900
+light: every building of the site drawn in the data colour and framed with the pin (zoom 17.6, pitch 75), legend
+“อาคารในบริเวณหน่วยงาน”, chip “ทั้งบริเวณ 21 อาคาร”, the provenance line “บริเวณ กรอบพื้นที่ OpenStreetMap 6 พ.ย. 2569
+© OpenStreetMap contributors”, Street View on the building the camera picks; `?office=47d101fb14`
+(มหาวิทยาลัยราชภัฏนครสวรรค์, 132 buildings) dark: all 132 found among the drawn pieces and framed (zoom 16.9);
+`?office=48fc01ad05` (สถานีตำรวจนครบาลลุมพินี, 16) at 390 × 844: framed above the sheet. The sites over OpenStreetMap
+buildings need the basemap tiles: verified live (§6).
 
 0.3.0: `?office=b86ab4e816` loads with the new module, no console error; before a building is known the office's
 Street View opens at the point, as before. The building choice needs the basemap tiles (names, streets), which the
@@ -137,6 +168,8 @@ GitHub Pages (main / root), release commit `1932f76`:
 
 ## 7. Not verified
 
+- Office sites: whether each frame is the office's whole compound and nothing more is not checked against a layout or
+  the parcels (`osm_polygon`, docs/SITES.md §4); the 9 rows in `review` and the 78 frames past 600 m wait for a person.
 - CVD simulation, native mobile devices, screen readers beyond the accessible names and roles in the markup.
 - Memory and load time on a low-end phone (about 9 MB of data over the wire, gzip).
 - Whether each office is open at its production point today (a research-team task, PRODUCT_STATEMENT §7).
