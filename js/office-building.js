@@ -315,9 +315,10 @@ export function bearingDeg([lon1, lat1], [lon2, lat2]) {
  * Street View in front of a building, turned to face it.
  * rings: the building's outer rings ([[lon, lat]…], pieces as drawn); height: its height (m); pin: the office's point;
  * roads: [{cls, brunnel?, coords: [[lon, lat]…]}].
- * The viewpoint is the point of a public street nearest the building's centre (a service road — a compound's drive or car
- * park — a motorway or a bridge only when none is near), counting the way from the pin too: in full when the pin stands at
- * the building (within GATE_M — dropped at the gate, it marks the street people come in from), a quarter otherwise; without a street within
+ * The viewpoint is the point of a public street (a service road — a compound's drive or car park — a motorway or a
+ * bridge only when none is near) where the way from the pin to the street and on to the building's centre is shortest:
+ * the way from the pin counted in full when the pin stands at the building (within GATE_M — dropped at the gate, it
+ * marks the street people come in from), a quarter otherwise; without a street within
  * FRONTAGE_REACH_M, the pin itself when it stands outside the building. heading = bearing viewpoint → centre; pitch
  * lifts the view for a tall building close by.
  * → {lat, lon, heading, pitch, from: 'road'|'pin'} | null (nothing to face it from).
@@ -336,6 +337,7 @@ export function streetViewOf(rings, height, pin, roads = []) {
   // A pin at the building (inside or within GATE_M) marks the side people come in from: its street counts in full.
   const pinD = !hasPin ? Infinity : pinInside ? 0 : Math.min(...usable.map(r => measure({outer: r}, pin, kx, ky).d));
   const wPin = pinD <= GATE_M ? 1 : 0.25;
+  const px = hasPin ? pin[0] * kx : 0, py = hasPin ? pin[1] * ky : 0;
   // Public streets at ground level first; a service road (a compound's drive or car park, rarely a panorama), a
   // motorway or a bridge (an elevated view) only when none is near.
   let best = null;
@@ -346,14 +348,19 @@ export function streetViewOf(rings, height, pin, roads = []) {
     for (let i = 0; i < c.length - 1; i++) {
       const ax = c[i][0] * kx, ay = c[i][1] * ky, bx = c[i + 1][0] * kx, by = c[i + 1][1] * ky;
       const dx = bx - ax, dy = by - ay;
-      const t = Math.max(0, Math.min(1, ((tx - ax) * dx + (ty - ay) * dy) / (dx * dx + dy * dy || 1)));
-      const qx = ax + t * dx, qy = ay + t * dy, dT = Math.hypot(qx - tx, qy - ty);
+      // The point of the segment with the shortest way pin → street → building (weighted; convex along the segment).
+      const cost = t => {
+        const qx = ax + t * dx, qy = ay + t * dy;
+        return Math.hypot(qx - tx, qy - ty) + (hasPin ? wPin * Math.hypot(qx - px, qy - py) : 0);
+      };
+      let lo = 0, hi = 1;
+      for (let k = 0; k < 30; k++) { const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3; if (cost(m1) <= cost(m2)) hi = m2; else lo = m1; }
+      const t = (lo + hi) / 2, qx = ax + t * dx, qy = ay + t * dy, dT = Math.hypot(qx - tx, qy - ty);
       if (dT > FRONTAGE_REACH_M || dT < 3) continue;
       const q = [qx / kx, qy / ky];
       if (usable.some(r => pointInRing(q, r))) continue; // a street under the building (an arcade) shows its inside
-      const dP = hasPin ? Math.hypot(qx - pin[0] * kx, qy - pin[1] * ky) : 0;
-      const cost = dT + wPin * dP + penalty;
-      if (!best || cost < best.cost) best = {cost, q, dT};
+      const total = cost(t) + penalty;
+      if (!best || total < best.cost) best = {cost: total, q, dT};
     }
   }
   let from = null, view = null, dist = 0;

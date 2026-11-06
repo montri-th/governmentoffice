@@ -107,9 +107,9 @@ on the map decided it) or “อาคารใกล้หมุด”. A build
 `streetViewOf` (owner: “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the viewpoint is the point of a public
 street (trunk … minor at ground level; a service road — a compound's drive or car park, rarely a panorama — a motorway
 or a bridge only when none is near; never a path, a track or a tunnel) within 120 m of the centre of the building being
-looked at, the one with the shortest way to the building plus the way from the office's point: counted in full when
-the point stands at the building (inside or within 60 m — a point dropped at the gate marks the street people come in
-from; the court's gate street, not the back street nearer its centre), a quarter otherwise. `heading` turns the
+looked at where the way from the office's point to the street and on to the building is shortest — the way from the
+point counted in full when the point stands at the building (inside or within 60 m: a point dropped at the gate marks
+the street people come in from — for the court, its gate street, not the alley behind it), a quarter otherwise. `heading` turns the
 panorama from there to the building's centre and `pitch` lifts it for a tall building close by
 (`map_action=pano&viewpoint=…&heading=…&pitch=…`). Without a street, the office's point when it stands outside the
 building; before the building is known, the point with Google's own heading, as before. The building panel's Street
