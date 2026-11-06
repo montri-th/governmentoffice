@@ -123,6 +123,28 @@ Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the 
 
 ## 6. Live
 
+0.4.0 — release commits `58e7675` (0.4.0) and `4c5af8f` (a large site framed as its buildings arrive; cache tag
+`20261106-r8`):
+
+- `npm run verify:live` (2026-11-06, commit `4c5af8f`): **251 ok, 0 failed** — every published file byte-identical
+  (SHA-256) on https://montri-th.github.io/governmentoffice/ (`evidence/live-attestation.json`, not committed).
+- The research sheet's new tab `07_SITE_BOUNDARY_CHECK`, read back from its own HTML view after the paste: the whole
+  tab's text SHA-256 `8ac6dd2b…` = the text of the run; the checked rows' digest `fbd4065a…` = `data/sites.json`
+  `meta.tab.digest`.
+- In the owner's Chrome (window 1568 × 754, real OpenFreeMap tiles, CityMETER Building V4, terrain): `?office=304e6e8f19`
+  (สำนักงานตำรวจแห่งชาติ) light — all 21 buildings in the data colour, framed with the pin, “อาคารในบริเวณหน่วยงาน”,
+  “ทั้งบริเวณ 21 อาคาร”; `?office=f932e935c6` (กรมเจ้าท่า, a site over OpenStreetMap buildings) — 5 buildings, the sources
+  row “บริเวณ 5 อาคาร · กรอบพื้นที่ OpenStreetMap · อาคาร OpenStreetMap · 6 พ.ย. 2569 · © OpenStreetMap contributors
+  (ODbL-1.0)” with the copyright link, Street View on the street in front of the office's own building (heading 253°);
+  `?office=f3ba394da7` (มหาวิทยาลัยทักษิณ, 172 buildings) dark — the first published version stayed framed on the first
+  building that arrived (the terrain and the legend had used up the refits before the campus's tiles came), `4c5af8f`
+  frames the whole campus (zoom 17.3); `?office=5006615c24` (เรือนจำกลางอุบลราชธานี, 128) light — the whole compound, no
+  console error. The phone at 390 × 844 in same-origin frames of the live site: dark `?office=48fc01ad05`
+  (สถานีตำรวจนครบาลลุมพินี, 16) framed above the sheet; light `?office=f932e935c6`. The owner's saved theme (light) was
+  put back.
+- Registry: `R01_DATASETS` row `research.TH.government_office` `demo_check_note` updated in place (web, repository and
+  check date unchanged); Changes row `CHANGE-GOVERNMENTOFFICE-DEMO-20261106-04`; both read back.
+
 0.3.0 — release commits `c2314e4` (0.3.0), `be7c329` and `2529478` (Street View from the street people come in from;
 cache tag `20261106-r6`):
 
