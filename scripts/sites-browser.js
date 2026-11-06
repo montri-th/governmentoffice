@@ -1,8 +1,10 @@
 // sites-browser.js — office sites from OpenStreetMap area frames, in the owner's browser (docs/SITES.md §6). Paste the
 // whole file into Claude in Chrome javascript_tool on this repository's page (https://montri-th.github.io/governmentoffice/
 // or any file of it), after a window.__SITES_IN line; it returns at once and works in the background:
-//   window.__SITES_IN = {dates: ['2026-11-06T12:05:51Z', …], rows: ['key|w123|own|go|0|0', …]}
-//       a row: office key | OSM element (w/r + id) | match tier | go, too_big or review | metres outside the frame | date index
+//   window.__SITES_IN = {dates: ['2026-11-06T12:05:51Z', …], rows: ['key|w123|own|go|0|0', …], check: [key, …], code: ''}
+//       a row: office key | OSM element (w/r + id) | match tier | go, too_big or review | metres outside the frame | date index;
+//       check: sites a person looks at first (status review); code: where the modules load from when this page's copy is
+//       older (e.g. https://cdn.jsdelivr.net/gh/montri-th/governmentoffice@<commit>/) — the data always load from this page
 //   JSON.stringify(window.__SITES.state())                    poll until done
 //   window.__SITES.show('tsv' | 'digest' | 'osm')             puts one text on the page for get_page_text (sha256 in state)
 // tsv: the rows of the research sheet's site tab (header first); digest: key|status|source|count|sha256 of the buildings;
@@ -45,8 +47,9 @@
     text: Object.fromEntries(Object.keys(S.text).map(k => [k, {len: S.text[k].length, sha: S.sha[k]}])), counts: S.counts || null});
   S.run = async () => {
     try {
-      const M = await import(`${base}scripts/site-buildings.mjs`);
-      const BU = await import(`${base}js/building-units.js`), MS = await import(`${base}js/map-style.js`);
+      const code = window.__SITES_IN?.code || base;
+      const M = await import(`${code}scripts/site-buildings.mjs`);
+      const BU = await import(`${code}js/building-units.js`), MS = await import(`${code}js/map-style.js`);
       const off = await (await fetch(`${base}data/offices.json`)).json();
       const pre = Object.fromEntries(off.types.map(t => [t.id, t.prefix || '']));
       const rowsOf = new Map();
