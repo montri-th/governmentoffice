@@ -1,6 +1,6 @@
 # CityMETER Government Office 0.4.0 — verification
 
-Release 0.4.0 (cache tag `20261106-r7`), built 2026-11-06. 0.4.0 answers the owner's requests of 2026-11-06 “ใช้วิธีนี้
+Release 0.4.0 (cache tag `20261106-r8`), built 2026-11-06. 0.4.0 answers the owner's requests of 2026-11-06 “ใช้วิธีนี้
 และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม osm-area-site-join และ campus-site-join” and “เรียงลำดับแบบฉลาดนะ เอาแบบ quick win … แค่ให้
 ครอบคลุมทั้งประเทศ”, with the decisions “อนุมัติ ทุกข้อ” · “OK” · “OK” · “ยังไม่ต้อง … เตรียมเชื่อมไว้ละกัน”: an office's site —
 every drawn building of its compound — from the research sheet's new tab `07_SITE_BOUNDARY_CHECK` (`data/sites.json`,

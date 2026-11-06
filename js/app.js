@@ -890,7 +890,7 @@ function frameFocus({instant = false} = {}) {
   const box = visibleBox();
   state.userCamera = false;
   // The ground the frame was computed on (0 off terrain or before its DEM tile arrives): onGroundChange refits when it moves.
-  state.framed = {id: target.id, key: shape.key, refits: state.framed?.id === target.id ? state.framed.refits : 0, ground: groundAt(map, target.anchor), box};
+  state.framed = {id: target.id, key: shape.key, refits: state.framed?.id === target.id ? state.framed.refits : 0, ground: groundAt(map, target.anchor), box, siteN: target.site?.n || 0};
   if (!state.view3d) {
     const [q0] = shape.points;
     const b = shape.points.reduce((acc, q) => acc.extend([q[0], q[1]]), new maplibregl.LngLatBounds([q0[0], q0[1]], [q0[0], q0[1]]));
@@ -937,12 +937,18 @@ function refitOnNewBox() {
   frameFocus();
 }
 
-/** The building arrived (or changed) after the target was framed: turn to it, unless the user moved the map. */
+/**
+ * The building arrived (or changed) after the target was framed: turn to it, unless the user moved the map. A site's
+ * buildings arrive tile by tile (a campus of 172 over several results, while the terrain and the legend also refit):
+ * framing more of the site is progress and never uses up the refits.
+ */
 function refitOnNewBuilding() {
   const target = focusTarget();
-  if (!target || !state.framed || state.framed.id !== target.id || state.userCamera || state.framed.refits >= MAX_REFITS) return;
+  if (!target || !state.framed || state.framed.id !== target.id || state.userCamera) return;
+  const growing = (target.site?.n || 0) > (state.framed.siteN || 0);
+  if (!growing && state.framed.refits >= MAX_REFITS) return;
   if (focusShape(target).key === state.framed.key) return;
-  state.framed.refits++;
+  if (!growing) state.framed.refits++;
   frameFocus();
 }
 
