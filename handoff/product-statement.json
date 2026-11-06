@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.1.0",
+ "productVersion": "0.2.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-statement",
  "dataset_id": "research.TH.government_office",
@@ -82,43 +82,44 @@
   "expected_quality_bar": "หนึ่งหน้าจอ หนึ่งนาที ทุกตัวเลขมีแหล่ง ไม่ทราบไม่เป็น 0 ระยะทุกตัวเป็นระยะตรง"
  },
  "winning_strategy": [
-  "นับให้ถูกก่อน: หนึ่งหน่วยงานหนึ่งแถว บุคลากรเฉพาะที่บันทึกรายแห่ง ไม่นับ อปท. ซ้ำ ยอดตรงกับ production",
+  "นับให้ถูกก่อน: หนึ่งจุดของ production หนึ่งแถว ยอดตรงกับ production (440,005) บุคลากรเฉพาะที่บันทึกรายแห่ง นับครั้งเดียวต่อหน่วยงานและต่อ อปท.",
   "คำตอบของทำเลในหนึ่งแผง: บริการรัฐที่ใกล้ที่สุด หน่วยงานรอบ 2 กม. สถานี ภูมิประเทศ และอาคาร 3 มิติ",
   "ตามการย้าย: เหตุการณ์ย้ายและเปิดใหม่พร้อมประกาศในข้อค้นพบ พื้นที่ และหน่วยงาน",
   "ทะเบียนเดียวกัน: ขอบเขต รหัส และลิงก์ ?d=governmentOfficer เดียวกับ production สถานีจาก CityMETER · Transit อาคารจาก CityMETER · Hotel",
-  "ชุดเดียวกันทั้งหมด: การศึกษา ศาสนา และชุมชนของชุดข้อมูลเดียวกันโหลดเมื่อเลือก"
+  "ชุดเดียวกันทั้งหมด: หน่วยงานรัฐ การศึกษา ศาสนา และชุมชนของชุดข้อมูลเดียวกันอยู่บนแผนที่ตั้งแต่หน้าแรก เลือกหมวดเพื่อดูเฉพาะหน่วยงานรัฐ"
  ],
  "firstFinding": {
   "evidence": "Observed fact",
-  "offices": {
+  "every": {
    "measure": "count",
+   "scope": "every group (default)",
    "home": "NMA",
    "areas": [
     [
      "3001",
      "เมืองนครราชสีมา",
-     69
+     1185
     ],
     [
      "3014",
      "ปักธงชัย",
-     47
+     1150
     ],
     [
-     "3020",
-     "สีคิ้ว",
-     42
+     "3008",
+     "ด่านขุนทด",
+     1131
     ]
    ],
-   "value": 158,
-   "homeValue": 715,
-   "share": "22%",
+   "value": 3466,
+   "homeValue": 20003,
+   "share": "17%",
    "rail": "hidden (no operating station in the province)",
    "outside": [
-    "6001",
-    "เมืองนครสวรรค์",
-    "NSN",
-    84
+    "5701",
+    "เมืองเชียงราย",
+    "CRI",
+    2054
    ],
    "staff": {
     "home": "CBI",
@@ -147,15 +148,45 @@
      "LRI",
      9101
     ]
-   },
-   "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+   }
   },
-  "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+  "offices": {
+   "measure": "count",
+   "scope": "?group=offices",
+   "home": "NMA",
+   "areas": [
+    [
+     "3001",
+     "เมืองนครราชสีมา",
+     74
+    ],
+    [
+     "3014",
+     "ปักธงชัย",
+     47
+    ],
+    [
+     "3020",
+     "สีคิ้ว",
+     44
+    ]
+   ],
+   "value": 165,
+   "homeValue": 744,
+   "share": "22%",
+   "outside": [
+    "8417",
+    "พุนพิน",
+    "SNI",
+    92
+   ]
+  },
+  "note": "fixtures of release 0.2.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
  },
  "data_transparency": {
   "unit": {
-   "row": "one office: a point of the production Government Officer dataset, or the repeated points of one office (same type and name, same province, chained within 100 m) — the point with the smallest UUID",
-   "count": "แห่ง — points of the selection",
+   "row": "one point of the production Government Officer dataset (every production point is a row, as production counts them; repeated points of one office included, their personnel counted once)",
+   "count": "แห่ง — points of the selection (หน่วยงานและสถานที่ by default; หน่วยงาน under ?group=offices; สถานที่ for education, religion, community)",
    "staff": "คน — personnel production records at the office (types with a site count only)"
   },
   "sources": [
@@ -211,7 +242,8 @@
   "79 of the 97 recent events name no production row; their new places are not points of this dataset.",
   "899 points have no category yet, mostly agencies’ head offices in Bangkok; their personnel is the agency’s whole workforce.",
   "Distances are straight lines between reference points.",
-  "Building heights are model estimates (CityMETER Building V4) or tags/defaults (OpenStreetMap)."
+  "Building heights are model estimates (CityMETER Building V4) or tags/defaults (OpenStreetMap).",
+  "9,806 production points repeat an office (same type and name, same province, within 100 m) and are counted as production counts them; e.g. อำเภอพุนพิน holds 16 points of one police station."
  ],
  "claimBoundary": {
   "canSay": [

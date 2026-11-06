@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.1.0",
+ "productVersion": "0.2.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-brief",
  "datasetCheckedOn": "2026-11-06",
@@ -19,12 +19,12 @@
   "ผู้ประเมินมูลค่าและสถาบันการเงิน"
  ],
  "journey": [
-  "first Aha (3D city scene, offices)",
-  "switch the measure (หน่วยงาน | บุคลากร)",
+  "first Aha (3D city scene, every production point)",
+  "switch the measure (หน่วยงานและสถานที่ | บุคลากร)",
   "district → groups, types, moves and openings, stations, offices",
   "station → offices within 500 m and the nearest services",
   "office → building view, type, personnel, agency, its move, nearest services, offices round it",
-  "group or type filter → its card; other places of the dataset on demand",
+  "group or type filter → its card; ?group=offices for the government offices, one group, or every group (default)",
   "charts and table",
   "open the same area in CityMETER production"
  ],
@@ -38,44 +38,76 @@
   "scope": "scopeRows",
   "measure": "count (default) | staff",
   "ranking": "เขต/อำเภอ by the measure (then the other measure, then name) inside the home province = the province holding the most of the measure among rows placed at district level; up to three and never every district holding the measure (N ≤ 3 → top N − 1); never cut through a tie; none left → spread",
-  "headlineTemplate": "{share}% ของ{subject}ใน{home} อยู่ใน {n} {เขต|อำเภอ}นี้ (one district: อยู่ใน{เขต|อำเภอ}{name}); subject = js/model.js#unitFor: หน่วยงานรัฐ · a group (หน่วยงานตำรวจ …, ศาสนสถานและโบราณสถาน …) · a type (สถานีตำรวจ …) · บุคลากรที่บันทึก · สถานที่ทุกหมวด",
+  "headlineTemplate": "{share}% ของ{subject}ใน{home} อยู่ใน {n} {เขต|อำเภอ}นี้ (one district: อยู่ใน{เขต|อำเภอ}{name}); subject = js/model.js#unitFor: หน่วยงานและสถานที่ (every group, default) · หน่วยงานรัฐ (?group=offices) · a group (หน่วยงานตำรวจ …, ศาสนสถานและโบราณสถาน …) · a type (สถานีตำรวจ …) · บุคลากรที่บันทึก",
   "numerator": "Σ measure of the focused districts (production membership)",
   "denominator": "Σ measure of every row of the home province in the selection (homeValue)",
   "personality": "rail: two bars — share of the measure within 500 m (straight line) of an operating CityMETER · Transit station among the focus rows with a point vs the rest of the province; both bases in each bar’s title and accessible text; hidden when nothing in the province is near rail",
   "secondary": "the district(s) with the most of the measure outside the home province, every district tied at that value, “มากกว่าทุก{เขต|อำเภอ}ของ{home}” when it holds more than the focus’ first district",
   "action": "โฟกัส / ดูทุกพื้นที่ (auto focus by default; ?areas=all releases it) · เปรียบเทียบพื้นที่ (charts)",
   "model": "js/area-insight.js#summarizeAreaInsight",
-  "filter": "every filter of scopeRows; the measure switch; the group scope (other places loaded on demand)",
+  "filter": "every filter of scopeRows; the measure switch; the group scope (every group by default, every file loaded before the first paint)",
   "defaultSnapshot": {
    "measure": "count",
+   "scope": "every group (default)",
    "home": "NMA",
    "areas": [
     [
      "3001",
      "เมืองนครราชสีมา",
-     69
+     1185
     ],
     [
      "3014",
      "ปักธงชัย",
-     47
+     1150
     ],
     [
-     "3020",
-     "สีคิ้ว",
-     42
+     "3008",
+     "ด่านขุนทด",
+     1131
     ]
    ],
-   "value": 158,
-   "homeValue": 715,
-   "share": "22%",
+   "value": 3466,
+   "homeValue": 20003,
+   "share": "17%",
    "rail": "hidden (no operating station in the province)",
    "outside": [
-    "6001",
-    "เมืองนครสวรรค์",
-    "NSN",
-    84
+    "5701",
+    "เมืองเชียงราย",
+    "CRI",
+    2054
    ],
+   "offices": {
+    "measure": "count",
+    "scope": "?group=offices",
+    "home": "NMA",
+    "areas": [
+     [
+      "3001",
+      "เมืองนครราชสีมา",
+      74
+     ],
+     [
+      "3014",
+      "ปักธงชัย",
+      47
+     ],
+     [
+      "3020",
+      "สีคิ้ว",
+      44
+     ]
+    ],
+    "value": 165,
+    "homeValue": 744,
+    "share": "22%",
+    "outside": [
+     "8417",
+     "พุนพิน",
+     "SNI",
+     92
+    ]
+   },
    "staff": {
     "home": "CBI",
     "areas": [
@@ -104,7 +136,7 @@
      9101
     ]
    },
-   "note": "fixtures of release 0.1.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
+   "note": "fixtures of release 0.2.0 (tests/insight.test.js, tests/views.test.js), never UI constants"
   },
   "fallbacks": {
    "empty": "ไม่พบ{หน่วยงาน|สถานที่}ตามตัวกรองนี้ + ล้างตัวกรอง",
@@ -114,15 +146,20 @@
   "camera": "city preset framing the focus districts; plan when they are spread (> 0.3°)"
  },
  "countingUnitContract": {
-  "default": "offices (แห่ง): one office = a production point or the repeated points of one office (same type and name, same province, chained within 100 m)",
+  "default": "points (แห่ง): one production point of the Government Officer dataset = one row, as production counts them (repeated points of one office included); every group by default",
   "alternatives": [
    "personnel recorded (คน): Σ officer of the types that record a count at the site"
   ],
   "words": {
    "count": "แห่ง",
-   "staff": "คน"
+   "staff": "คน",
+   "scope": {
+    "every group": "หน่วยงานและสถานที่",
+    "government offices": "หน่วยงาน (หน่วยงานรัฐ)",
+    "places": "สถานที่"
+   }
   },
-  "rule": "unknown personnel counted apart, never 0; a local government counted once per organisation (staffShared); an agency’s whole workforce shown on its head office only (agencyStaff); places of the other groups have no personnel (switch off)",
+  "rule": "unknown personnel of a government office counted apart, never 0; personnel counted once per office (repeated points) and per local-government organisation (staffShared); an agency’s whole workforce shown on its head office only (agencyStaff); places (education, religion, community) have no personnel — never unknown, no personnel bar or column (switch off for a scope of places only)",
   "switch": "legend radio group, URL ?metric=staff"
  },
  "metricContract": {
@@ -282,7 +319,7 @@
   "buildings": "focus-tier footprints: OpenStreetMap (pieces of one outline cut by tile edges, building:parts, podium + tower grouped) or, inside a CityMETER unit, CityMETER Building V4 (whole buildings, keys cm:)",
   "points": "office points of the scope",
   "rule": "display-time point-in-footprint (js/building-join.js#joinBuildings)",
-  "click": "one office → the office; several → the building panel “หน่วยงานในอาคารนี้” (“สูงราว”, the outline source in the title and the provenance line)",
+  "click": "one row → that office or place; several → the building panel “หน่วยงานและสถานที่ในอาคารนี้” (หน่วยงาน / สถานที่ by the scope; “สูงราว”, the outline source in the title and the provenance line)",
   "neverChanges": "any count or district membership",
   "nearest": "an office whose point falls in no outline is framed on the nearest drawn building (cameraContract.buildingView.target) — never joined, counted or listed"
  },
@@ -438,30 +475,30 @@
   "groupFiles": {
    "education": {
     "file": "data/groups/education.json",
-    "rows": 74139,
-    "bytes": 7643446,
-    "sha256": "47642e1471f7f5d9d1962b45cd343c6693c7c0721cbb0797bc8449b01744c5e3"
+    "rows": 75835,
+    "bytes": 7793814,
+    "sha256": "a750131273c799adcfde8ce2600e787a40457dceb1635475f3ef5194cd4ec1bb"
    },
    "religion": {
     "file": "data/groups/religion.json",
-    "rows": 109289,
-    "bytes": 10367051,
-    "sha256": "a719f4d94e57c4a6bafb3b8487ab4d66fd8b48bbd6505c25728b0857bde5c612"
+    "rows": 111421,
+    "bytes": 10541492,
+    "sha256": "0af2ffd7d4cf51ce8fd894f33dfc66df872aaabbdbe26070243753f386cecaca"
    },
    "community": {
     "file": "data/groups/community.json",
-    "rows": 227050,
-    "bytes": 17861824,
-    "sha256": "df209696902fde15bb9df94f8e4e5daecbd0e0109c1496416d84eb9c7baa3c40"
+    "rows": 232181,
+    "bytes": 18195223,
+    "sha256": "bc7b439ed5f134057dae6b0350d8e1a7bf60747b00d3aa5fe927366bd61784fc"
    }
   },
-  "rows": 430199,
+  "rows": 440005,
   "points": 440005,
-  "officeRows": 19721,
+  "officeRows": 20568,
   "counts": {
    "points": 440005,
-   "rows": 430199,
-   "officeRows": 19721,
+   "rows": 440005,
+   "officeRows": 20568,
    "repeatPoints": 9806,
    "repeatPointsByGroup": {
     "admin": 640,
@@ -474,30 +511,33 @@
     "fire": 36,
     "unclassified": 4
    },
-   "staffSharedRows": 182,
-   "staffSharedPersonnel": 14548,
+   "staffSharedRows": 744,
+   "staffSharedRepeatRows": 562,
+   "staffSharedRepeatPersonnel": 47393,
+   "staffSharedOrgRows": 182,
+   "staffSharedOrgPersonnel": 14548,
    "groups": {
-    "admin": 9027,
-    "police": 6402,
-    "fire": 2234,
-    "justice": 460,
-    "military": 699,
-    "unclassified": 899,
-    "education": 74139,
-    "religion": 109289,
-    "community": 227050
+    "admin": 9667,
+    "police": 6548,
+    "fire": 2270,
+    "justice": 472,
+    "military": 708,
+    "unclassified": 903,
+    "education": 75835,
+    "religion": 111421,
+    "community": 232181
    },
    "staffRows": 10095,
    "staff": 535745,
    "agencyStaffRows": 177,
-   "rawOfficer": 9953796,
+   "rawOfficer": 10269084,
    "districts": 925,
    "provinces": 77,
    "events": 97,
    "eventsMatched": 18,
    "eventsWithPoint": 9,
-   "ministryRows": 207376,
-   "railWithin2km": 1691
+   "ministryRows": 212291,
+   "railWithin2km": 1723
   },
   "reconciliation": {
    "cells": 9046,
@@ -597,7 +637,7 @@
   },
   {
    "id": "G2",
-   "rule": "one office per production point or per repeated points of one office (≤ 100 m, same type and name, same province); every production point in exactly one row"
+   "rule": "one row per production point (440,005 = production’s count); repeated points of one office stay rows, their personnel counted once; never merged"
   },
   {
    "id": "G3",
@@ -629,7 +669,7 @@
   },
   {
    "id": "G10",
-   "rule": "places of education, religion and community load on demand and read as “สถานที่” without personnel"
+   "rule": "every group is the default scope (every file loaded before the first paint); places of education, religion and community read as “สถานที่” without personnel; ?group=offices reads the government offices"
   },
   {
    "id": "G11",
@@ -670,6 +710,6 @@
   "site": "GitHub Pages from main /root",
   "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
   "liveCheck": "npm run verify:live",
-  "cacheTag": "?v=20261106-r1 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+  "cacheTag": "?v=20261106-r2 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
  }
 }

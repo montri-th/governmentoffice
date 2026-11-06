@@ -1,20 +1,21 @@
 # CityMETER · Government Office
 
-> Government offices across Thailand by district (เขต/อำเภอ) from the CityMETER production Government Officer dataset, with production's groups and types, the personnel production records at an office, the nearest district office, local government, police station, fire station and court round a point, recent moves and openings with the agencies' announcements, and straight-line distance to rail stations (CityMETER Transit). A Landometer CityMETER public demo, release 0.1.0 (2026-11-06). Research sheet read and built 2026-11-06.
+> Every point of the CityMETER production Government Officer dataset across Thailand (440,005, as production counts them) by district (เขต/อำเภอ): government offices and the places of the same dataset (education, religion, community), with production's groups and types, the personnel production records at an office, the nearest district office, local government, police station, fire station and court round a point, recent moves and openings with the agencies' announcements, and straight-line distance to rail stations (CityMETER Transit). A Landometer CityMETER public demo, release 0.2.0 (2026-11-06). Research sheet read and built 2026-11-06.
 
 What one figure means:
-- offices (แห่ง) = one office: a point of the production Government Officer dataset, or the repeated points of one office (same type and name, same province, chained within 100 m), kept once. Not an official register, not a field check that the office is open at that point.
-- personnel (คน) = Σ the personnel production records at the office (`officer`), only for the types that record a count at the site (อบต., ทต., ทม., ทน., fire stations, provincial and district courts, military camps …). Police stations, district offices and types whose value is a default are unknown, never 0. A local government's personnel is counted once per organisation; an agency's whole workforce recorded at its head office is shown on that office only, never in an area total. Not civil servants of an area, daytime population or service capacity.
-- groups = production's categories: administration and local government, police, fire, courts and justice, military, category not yet assigned (the government offices, the default scope); education, religion and heritage, community and associations (other places of the same dataset, loaded on demand, counted as places without personnel).
+- points (แห่ง) = one point of the production Government Officer dataset (440,005; every point is a row, as production counts them, repeated points of one office included). Not an official register, not a field check that the office is open at that point.
+- personnel (คน) = Σ the personnel production records at the office (`officer`), only for the types that record a count at the site (อบต., ทต., ทม., ทน., fire stations, provincial and district courts, military camps …). Police stations, district offices and types whose value is a default are unknown, never 0. Personnel is counted once per office (repeated points) and once per local-government organisation; an agency's whole workforce recorded at its head office is shown on that office only, never in an area total. Places (education, religion, community) have no personnel. Not civil servants of an area, daytime population or service capacity.
+- groups = production's categories: administration and local government, police, fire, courts and justice, military, category not yet assigned (the government offices, `?group=offices`); education, religion and heritage, community and associations (places of the same dataset, without personnel). The default scope is every group.
 - types = production's codes and labels (gov_sub_office_id), never re-typed from a name.
 - nearest services = the nearest office of each kind (district office, local government, police station, fire station, court) within 30 km straight line, only where production types that service in the point's province (Bangkok: police and fire). Not a jurisdiction or a service area.
 - recent moves and openings = 97 dated events of 2024–2026 (B.E. 2567–2569) that production does not yet hold at their new place, with what the date means and the agency's announcement.
 - distances = straight lines between reference points, not walking routes, travel times or catchments.
 - districts = CityMETER production districts (codes as in https://landometer.com/v3/citymeter/{province}/D/{district}?d=governmentOfficer); membership is the production district of the point's overlay subdistrict.
 
-Snapshot (release 0.1.0; fixtures, recompute from data):
-- 440,005 production points → 430,199 rows; 19,721 government offices (administration and local government 9,027 · police 6,402 · fire 2,234 · unclassified 899 · military 699 · courts and justice 460); 535,745 personnel recorded at 10,095 offices; 925 of 928 districts, 77 provinces. Rows and Σ officer per district × category equal production's government-agency info (9,046 cells, 0 mismatches).
-- 22% of the government offices of Nakhon Ratchasima (158 of 715) are in Mueang Nakhon Ratchasima, Pak Thong Chai and Sikhio; the district with the most offices outside it is Mueang Nakhon Sawan (84).
+Snapshot (release 0.2.0; fixtures, recompute from data):
+- 440,005 production points = 440,005 rows: government offices 20,568 (administration and local government 9,667 · police 6,548 · fire 2,270 · unclassified 903 · military 708 · courts and justice 472) and places 419,437 (community 232,181 · religion 111,421 · education 75,835); 535,745 personnel recorded at 10,095 offices; 925 of 928 districts, 77 provinces. Rows and Σ officer per district × category equal production's government-agency info (9,046 cells, 0 mismatches).
+- 17% of the points of Nakhon Ratchasima (3,466 of 20,003) are in Mueang Nakhon Ratchasima, Pak Thong Chai and Dan Khun Thot; the district with the most outside it is Mueang Chiang Rai (2,054).
+- Government offices only: 22% of those of Nakhon Ratchasima (165 of 744) are in Mueang Nakhon Ratchasima, Pak Thong Chai and Sikhio.
 - Personnel: 66% of the personnel recorded in Chonburi (14,314 of 21,533) is in Mueang Chonburi, Si Racha and Sattahip; the district with the most personnel recorded is Mueang Lopburi (9,101).
 
 Deep links (https://montri-th.github.io/governmentoffice/):
@@ -22,13 +23,13 @@ Deep links (https://montri-th.github.io/governmentoffice/):
 - ?province={code} — e.g. BKK, NMA, CBI (production codes)
 - ?area={district code} — e.g. 3001 (อำเภอเมืองนครราชสีมา)
 - ?areas={code},{code} | ?areas=all — focus districts / every district
-- ?group={admin|police|fire|justice|military|unclassified|education|religion|community|all} · ?type={production type code, e.g. 1070; none = no type}
+- ?group={offices|admin|police|fire|justice|military|unclassified|education|religion|community} (none = every group; all = every group, 0.1.0) · ?type={production type code, e.g. 1070; none = no type}
 - ?office={key: first 10 hex of the production UUID} · ?station={CityMETER Transit station id} · ?view={areas|mix|types} · ?search={text}
 
 Data and method:
 - [Product statement](https://montri-th.github.io/governmentoffice/PRODUCT_STATEMENT.md): users, problem, claim boundary
 - [Data and method](https://montri-th.github.io/governmentoffice/DATA_METHOD.md): sources, measures, personnel rules, district matching, context joins, limits
-- [Dataset](https://montri-th.github.io/governmentoffice/data/offices.json): columnar rows + dictionaries + provenance (meta); other groups in data/groups/{education,religion,community}.json
+- [Dataset](https://montri-th.github.io/governmentoffice/data/offices.json): columnar rows of the government offices + dictionaries + provenance (meta); the places in data/groups/{education,religion,community}.json
 - [Developer handoff](https://montri-th.github.io/governmentoffice/handoff/START_HERE.md)
 
 Map reading: symbol area grows with recorded personnel (hollow = an office with unknown personnel); names near the middle of the view rank by the type's tier, then recorded personnel; terrain facts describe the ground at hilly sites; choosing an office with a point opens a two-point perspective of a 3D building — the drawn building whose outline holds the pin, else the nearest drawn building within 300 m (800 m when nothing is drawn within 300 m), labelled “อาคารใกล้หมุด”, a camera choice, not a claim that the office is in it. Buildings per area: the units of CityMETER · Hotel (CityMETER Building V4 where it holds at least 1.15 × the OpenStreetMap buildings of a local administration it evaluated, else OpenStreetMap; data/building-units/).

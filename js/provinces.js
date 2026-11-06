@@ -28,23 +28,31 @@ function cssVar(name, fallback) {
 }
 
 /** Per-province model: the measure per province among `rows` (rows carry the production province code). */
+const PROVINCE_CACHE = new WeakMap();
 export function buildProvinceModel(rows, geojson, {metric = 'count'} = {}) {
-  const values = new Map(), counts = new Map(), staff = new Map();
+  // Once per rows array, measure and frames (a scope of up to 440,005 rows is reused between updates).
+  const key = rows && typeof rows === 'object' ? rows : null;
+  const hit = key && PROVINCE_CACHE.get(key);
+  if (hit && hit.n === rows.length && hit.metric === metric && hit.geojson === geojson) return hit.model;
+  const values = new Map(), counts = new Map(), staff = new Map(), offices = new Map();
   for (const r of rows || []) {
     values.set(r.province, (values.get(r.province) || 0) + rowValue(r, metric));
     counts.set(r.province, (counts.get(r.province) || 0) + 1);
     staff.set(r.province, (staff.get(r.province) || 0) + (r.staff || 0));
+    if (r.office) offices.set(r.province, (offices.get(r.province) || 0) + 1);
   }
   const provinces = (geojson?.features || []).map(f => {
     const code = String(f.id ?? f.properties?.id);
     const meta = provinceByCode(code) || {code, th: f.properties?.name || code, en: f.properties?.nameEn || code};
     return {id: code, code, name: meta.th, nameEn: meta.en, value: values.get(code) || 0, count: counts.get(code) || 0, staff: staff.get(code) || 0,
-      label: f.properties?.label || null, feature: f};
+      offices: offices.get(code) || 0, label: f.properties?.label || null, feature: f};
   });
   const ramp = buildMetricRamp(provinces.map(p => p.value), {metric, unit: metricOf(metric).one});
   // EVID-05: a province whose offices all have unknown personnel is no_data for personnel, never a measured 0.
-  for (const p of provinces) { const c = metric === 'staff' && p.count > 0 && !p.staff ? classify(null, ramp, 'no_data') : classify(p.value, ramp); p.state = c.state; p.fill = c.fill; p.ink = c.ink; p.outline = c.outline || null; }
-  return {metric, provinces, ramp, zeroCount: provinces.filter(p => p.state === 'measured_zero').length};
+  for (const p of provinces) { const c = metric === 'staff' && p.offices > 0 && !p.staff ? classify(null, ramp, 'no_data') : classify(p.value, ramp); p.state = c.state; p.fill = c.fill; p.ink = c.ink; p.outline = c.outline || null; }
+  const model = {metric, provinces, ramp, zeroCount: provinces.filter(p => p.state === 'measured_zero').length};
+  if (key) PROVINCE_CACHE.set(key, {n: rows.length, metric, geojson, model});
+  return model;
 }
 
 export function installProvinceLayers(map, geojson) {

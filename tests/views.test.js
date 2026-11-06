@@ -18,31 +18,36 @@ const HATYAI = '280dc7ddb7';
 const MOTS = 'e129d81ac9';
 /** A municipality office whose personnel production counts at the organisation's other office. */
 const SHARED = '790028a561';
-const detail = (data, index, r) => buildOfficeDetail(r, {scopeRows: data.rows, allRows: data.rows, index, groups: data.groups});
+const detail = (data, index, r, scopeRows = data.rows) => buildOfficeDetail(r, {scopeRows, allRows: data.rows, index, groups: data.groups});
 
-function views(metric = 'count') {
-  const {data, index} = load();
-  const rows = data.rows, ctx = ctxFor(data, index, {metric});
+/**
+ * Every panel as the page draws it: scope 'all' = the default (every production point, every group loaded), scope
+ * 'offices' = the government offices only (the หมวด filter “หน่วยงานรัฐทุกหมวด”, with only offices.json loaded).
+ */
+function views(metric = 'count', scope = 'all') {
+  const {data, index} = scope === 'all' ? loadAll() : load();
+  const group = scope === 'all' ? '' : 'offices';
+  const rows = filterRows(data.rows, {group}), ctx = ctxFor(data, index, {metric, group});
   const insight = summarizeAreaInsight(rows, index, {metric});
   const station = data.stations.find(s => s.id === 'RAILCAT:MRT_PINK:PK12');
   const police = filterRows(rows, {type: '1070'}), t1070 = data.types.find(t => t.id === '1070');
   return {
     overview: renderOverview({insight, summary: summarize(filterAreaRows(rows, new Set(insight.areaIds))), overview: buildOverview(rows, index, {groups: data.groups, metric, events: data.events}),
-      focusMode: 'auto', provinces: [], unknownProvince: 0, province: '', groups: data.groups, stations: stationsOf(rows, metric), ctx}),
+      focusMode: 'auto', provinces: [], unknownProvince: 0, province: '', group, groups: data.groups, stations: stationsOf(rows, metric), ctx}),
     area: renderArea(buildAreaProfile(rows, '3001', index, data.groups, {metric, events: data.events}), () => '#000', ctx),
-    office: renderOffice(detail(data, index, rows.find(r => r.id === HATYAI)), ctx),
-    headOffice: renderOffice(detail(data, index, rows.find(r => r.id === MOTS)), ctx),
-    station: renderStation(buildStationProfile(station, {scopeRows: rows, allRows: rows, groups: data.groups, metric, province: 'BKK'}), ctx),
+    office: renderOffice(detail(data, index, rows.find(r => r.id === HATYAI), rows), ctx),
+    headOffice: renderOffice(detail(data, index, rows.find(r => r.id === MOTS), rows), ctx),
+    station: renderStation(buildStationProfile(station, {scopeRows: rows, allRows: data.rows, groups: data.groups, metric, province: 'BKK'}), ctx),
     building: renderBuilding(buildBuildingProfile({key: 'osm:1', kind: 'osm', rows: rows.filter(r => r.area === '3001').slice(0, 3), height: 24}, index, data.groups), ctx),
     type: renderOverview({insight: summarizeAreaInsight(police, index, {metric}), summary: summarize(police), overview: buildOverview(police, index, {groups: data.groups, metric}),
-      focusMode: 'auto', province: '', groups: data.groups, ctx: ctxFor(data, index, {metric, type: t1070}),
-      typeCard: renderTypeCard(buildTypeProfile('1070', {allRows: rows, scopeRows: police, index, data, groups: data.groups, metric}), ctxFor(data, index, {metric, type: t1070}))}),
+      focusMode: 'auto', province: '', group, groups: data.groups, ctx: ctxFor(data, index, {metric, group, type: t1070}),
+      typeCard: renderTypeCard(buildTypeProfile('1070', {allRows: data.rows, scopeRows: police, index, data, groups: data.groups, metric}), ctxFor(data, index, {metric, group, type: t1070}))}),
   };
 }
 
 test('every panel view ends with one provenance line — dataset · source · date · boundary, then the method — and carries no caveat on screen', () => {
-  for (const metric of ['count', 'staff']) {
-    for (const [name, html] of Object.entries(views(metric))) {
+  for (const [scope, metric] of [['all', 'count'], ['all', 'staff'], ['offices', 'count'], ['offices', 'staff']]) {
+    for (const [name, html] of Object.entries(views(metric, scope))) {
       const t = text(html);
       for (const k of ['dataset', 'source', 'date', 'boundary']) assert.equal((html.match(new RegExp(`data-prov="${k}"`, 'g')) || []).length, 1, `${name}: ${k}`);
       assert.ok(t.includes('ชุดข้อมูล CityMETER Government Office'), `${name}: dataset`);
@@ -61,29 +66,48 @@ test('every panel view ends with one provenance line — dataset · source · da
   }
 });
 
-test('first screen: the Aha with numerator and denominator, the outside finding, the recent moves and openings', () => {
+test('first screen (every point): the Aha with numerator and denominator, the outside finding, every group, the recent moves and openings', () => {
   const o = text(views().overview);
-  assert.ok(o.includes('22% ของหน่วยงานรัฐในนครราชสีมา อยู่ใน 3 อำเภอนี้'), o.slice(0, 300));
-  assert.ok(o.includes('เมืองนครราชสีมา · ปักธงชัย · สีคิ้ว') && o.includes('158 จาก 715 แห่ง'), 'the share of the province\'s whole total');
+  assert.ok(o.includes('17% ของหน่วยงานและสถานที่ในนครราชสีมา อยู่ใน 3 อำเภอนี้'), o.slice(0, 300));
+  assert.ok(o.includes('เมืองนครราชสีมา · ปักธงชัย · ด่านขุนทด') && o.includes('3,466 จาก 20,003 แห่ง'), 'the share of the province\'s whole total');
   assert.ok(!o.includes('ใกล้รถไฟฟ้า ≤ 500 ม.'), 'no rail comparison where nothing is near an operating station');
-  assert.ok(o.includes('อันดับ 1 นอกนครราชสีมา: อำเภอเมืองนครสวรรค์ นครสวรรค์ 84 แห่ง · มากกว่าทุกอำเภอของนครราชสีมา'));
-  assert.ok(o.includes('หมวดหน่วยงาน แห่ง ปกครองและท้องถิ่น 9,027 ตำรวจ 6,402'));
+  assert.ok(o.includes('อันดับ 1 นอกนครราชสีมา: อำเภอเมืองเชียงราย เชียงราย 2,054 แห่ง · มากกว่าทุกอำเภอของนครราชสีมา'));
+  assert.ok(o.includes('3,466 แห่ง ในโฟกัส 6,732 บุคลากร ในโฟกัส'), 'personnel of the government offices among them');
+  assert.ok(o.includes('หมวด แห่ง ชุมชนและสมาคม 232,181 ศาสนาและโบราณสถาน 111,421 การศึกษาและแหล่งเรียนรู้ 75,835 ปกครองและท้องถิ่น 9,667 ตำรวจ 6,548'), 'every group of the dataset in its bars');
+  assert.ok(o.includes('ประเภทที่มีหน่วยงานและสถานที่มากที่สุด') && o.includes('ที่ทำการผู้ใหญ่บ้าน 80,764'));
   assert.ok(o.includes('ย้ายและเปิดใหม่ล่าสุด 97 รายการ') && o.includes('เปิดอาคารสำนักงานใหม่ สำนักตรวจเงินแผ่นดินจังหวัดตราด 20 ต.ค. 2569'));
-  assert.ok(o.includes('สถานีที่มีหน่วยงานรอบ ๆ มากที่สุด') && o.includes('ศูนย์ราชการเฉลิมพระเกียรติ (ชมพู) 34 แห่ง · ไม่ทราบจำนวนบุคลากร'));
-  assert.ok(o.includes('สถานที่อื่นในชุดข้อมูลเดียวกัน ทั้งชุด 430,199 แห่ง') && o.includes('ศาสนาและโบราณสถาน 109,289'), 'the other places of the dataset, loaded on demand');
+  assert.ok(!o.includes('หมวดอื่นในชุดข้อมูลเดียวกัน'), 'the default scope lists every group in its bars already');
   const s = text(views('staff').overview);
   assert.ok(s.includes('66% ของบุคลากรที่บันทึกในชลบุรี อยู่ใน 3 อำเภอนี้') && s.includes('14,314 จาก 21,533 คน'));
   assert.ok(s.includes('อันดับ 1 นอกชลบุรี: อำเภอเมืองลพบุรี ลพบุรี 9,101 คน · มากกว่าทุกอำเภอของชลบุรี'));
   assert.ok(s.includes('ตำรวจ — ยังไม่ระบุหมวด —'), 'groups whose offices record no personnel read “—”, never 0');
+  assert.ok(!/ชุมชนและสมาคม —|ศาสนาและโบราณสถาน —/.test(s), 'places are no personnel group: never “—” (unknown)');
+});
+
+test('government offices (one หมวด filter): their own Aha, groups, stations and the way back to every group', () => {
+  const o = text(views('count', 'offices').overview);
+  assert.ok(o.includes('22% ของหน่วยงานรัฐในนครราชสีมา อยู่ใน 3 อำเภอนี้'), o.slice(0, 300));
+  assert.ok(o.includes('เมืองนครราชสีมา · ปักธงชัย · สีคิ้ว') && o.includes('165 จาก 744 แห่ง'));
+  assert.ok(o.includes('อันดับ 1 นอกนครราชสีมา: อำเภอพุนพิน สุราษฎร์ธานี 92 แห่ง · มากกว่าทุกอำเภอของนครราชสีมา'));
+  assert.ok(o.includes('หมวดหน่วยงาน แห่ง ปกครองและท้องถิ่น 9,667 ตำรวจ 6,548'));
+  assert.ok(o.includes('สถานีที่มีหน่วยงานรอบ ๆ มากที่สุด') && o.includes('ศูนย์ราชการเฉลิมพระเกียรติ (ชมพู) 34 แห่ง · ไม่ทราบจำนวนบุคลากร'));
+  assert.ok(o.includes('หมวดอื่นในชุดข้อมูลเดียวกัน ทั้งชุด 440,005 แห่ง') && o.includes('ทุกหมวด 440,005') && o.includes('หน่วยงานรัฐ 20,568') && o.includes('ศาสนาและโบราณสถาน 111,421'), 'the way back to every group');
 });
 
 test('district, station, type, building and office panels: ranks, shares, straight-line context and the nearest services', () => {
-  const v = views();
+  const v = views('count', 'offices');
   const a = text(v.area);
   assert.ok(a.includes('อำเภอเมืองนครราชสีมา') && a.includes('อันดับ 10 จาก 925 ทั่วประเทศ · 1 จาก 32 ในนครราชสีมา'), a.slice(0, 240));
-  assert.ok(a.includes('10% ของนครราชสีมา 69 จาก 715 แห่งของนครราชสีมา'), 'the share tile carries numerator and denominator');
+  assert.ok(a.includes('10% ของนครราชสีมา 74 จาก 744 แห่งของนครราชสีมา'), 'the share tile carries numerator and denominator');
   assert.ok(a.includes('ย้ายและเปิดใหม่ในอำเภอเมืองนครราชสีมา 2 รายการ') && a.includes('ย้ายที่ตั้ง สถานีตำรวจภูธรโพธิ์กลาง 14 ก.พ. 2567'));
-  assert.ok(a.includes('ดูทั้งหมด 69 แห่ง'));
+  assert.ok(a.includes('ดูทั้งหมด 74 แห่ง'));
+  // Every point (the default): the same district with its places.
+  const all = views();
+  const aa = text(all.area);
+  assert.ok(aa.includes('อันดับ 28 จาก 925 ทั่วประเทศ · 1 จาก 32 ในนครราชสีมา') && aa.includes('6% ของนครราชสีมา 1,185 จาก 20,003 แห่งของนครราชสีมา'), aa.slice(0, 300));
+  assert.ok(aa.includes('หมวด แห่ง ชุมชนและสมาคม 675') && aa.includes('1,185 แห่ง 5,031 บุคลากร'));
+  assert.ok(text(all.office).includes('ทุกหมวดรอบ 2 กม. 231 แห่ง ชุมชน 127 การศึกษา 59 ศาสนา 37 ตำรวจ 5 ดับเพลิง 3'));
+  assert.ok(text(all.building).includes('หน่วยงานและสถานที่ในอาคารนี้ 3 แห่ง'));
   const s = text(v.station);
   assert.ok(s.includes('สถานีศูนย์ราชการเฉลิมพระเกียรติ') && s.includes('34 แห่ง') && s.includes('500 ม. รอบสถานี'));
   assert.ok(s.includes('กรมคุ้มครองสิทธิและเสรีภาพ ไม่ระบุประเภท · ไม่ทราบจำนวนบุคลากร · เขตหลักสี่ · 350 ม.'), 'a list row: type, personnel, district, straight-line distance');
@@ -100,9 +124,9 @@ test('district, station, type, building and office panels: ranks, shares, straig
   assert.match(v.headOffice, /href="https:\/\/secretary\.mots\.go\.th[^"]*"[^>]*>ประกาศ \(secretary\.mots\.go\.th\)</);
   assert.ok(h.indexOf('ย้ายที่ตั้ง') < h.indexOf('ทั้งหน่วยงาน'), 'the move comes before the figures');
   const t = text(v.type);
-  assert.ok(t.includes('ประเภท · ตำรวจ สถานีตำรวจ 1,780 แห่ง 77 จังหวัด 1% ใกล้รถไฟฟ้า 23 จาก 1,780 แห่ง'), t.slice(0, 200));
+  assert.ok(t.includes('ประเภท · ตำรวจ สถานีตำรวจ 1,843 แห่ง 77 จังหวัด 1% ใกล้รถไฟฟ้า 23 จาก 1,843 แห่ง'), t.slice(0, 200));
   assert.ok(t.includes('15% ของสถานีตำรวจในกรุงเทพมหานคร อยู่ใน 3 เขตนี้'));
-  assert.ok(t.includes('ใกล้รถไฟฟ้า ≤ 500 ม. 3 เขตนี้ 8% 1 จาก 13 แห่ง') && t.includes('เขตอื่น 28% 20 จาก 72 แห่ง'), 'both bases in the accessible text');
+  assert.ok(t.includes('ใกล้รถไฟฟ้า ≤ 500 ม. 3 เขตนี้ 8% 1 จาก 13 แห่ง') && t.includes('เขตอื่น 27% 20 จาก 73 แห่ง'), 'both bases in the accessible text');
   const b = text(v.building);
   assert.ok(b.includes('สูงราว 24 ม.') && b.includes('หน่วยงานในอาคารนี้ 3 แห่ง') && b.includes('หมุดในขอบอาคาร OpenStreetMap'));
   assert.deepEqual([meters(84), meters(1291), meters(2000)], ['80 ม.', '1.3 กม.', '2 กม.']);
@@ -161,26 +185,33 @@ test('missing stays missing: unknown personnel, an empty district — each says 
   assert.deepEqual([u.noArea, u.noProvince], [0, 0], 'every office sits in the production district of its point');
   const empty = buildAreaProfile([], '1039', index, data.groups);
   assert.equal(empty.coverageState, 'measured_zero');
-  assert.ok(text(renderArea(empty, () => '#000', ctx)).includes('ไม่พบหน่วยงานในเขตวัฒนา'));
+  assert.ok(text(renderArea(empty, () => '#000', ctx)).includes('ไม่พบหน่วยงานและสถานที่ในเขตวัฒนา'), 'every group (the default)');
+  assert.ok(text(renderArea(empty, () => '#000', ctxFor(data, index, {group: 'offices'}))).includes('ไม่พบหน่วยงานในเขตวัฒนา'), 'the government offices');
   // A district whose offices all have unknown personnel reads “—” with its reason in the title, never 0 people.
   const html = renderArea(buildAreaProfile([{...unknown, area: '1039', province: 'BKK', staff: null}], '1039', index, data.groups), () => '#000', ctx);
   assert.match(html, /title="ไม่ทราบจำนวนบุคลากร"/);
 });
 
-test('other places of the same dataset (loaded on demand) read as places: no personnel tile or line, their own subject', () => {
+test('places of education, religion and community read as places: no personnel tile or line, their own subject', () => {
   const {data, index} = loadAll();
   const rel = filterRows(data.rows, {group: 'religion'});
   const insight = summarizeAreaInsight(rel, index);
   const ctx = {meta: data.meta, unit: unitFor({groups: data.groups, group: 'religion'}), index, groups: data.groups};
   const t = text(renderOverview({insight, summary: summarize(filterAreaRows(rel, new Set(insight.areaIds))), overview: buildOverview(rel, index, {groups: data.groups}),
     focusMode: 'auto', provinces: [], group: 'religion', groups: data.groups, stations: stationsOf(rel), ctx}));
-  assert.ok(t.includes('22% ของศาสนสถานและโบราณสถานในเชียงใหม่ อยู่ใน 3 อำเภอนี้') && t.includes('1,005 จาก 4,626 แห่ง'));
-  assert.ok(t.includes('เขต/อำเภอที่มีสถานที่มากที่สุด') && t.includes('ประเภทที่มีสถานที่มากที่สุด') && t.includes('วัด 44,945'));
+  assert.ok(t.includes('22% ของศาสนสถานและโบราณสถานในเชียงใหม่ อยู่ใน 3 อำเภอนี้') && t.includes('1,035 จาก 4,711 แห่ง'));
+  assert.ok(t.includes('เขต/อำเภอที่มีสถานที่มากที่สุด') && t.includes('ประเภทที่มีสถานที่มากที่สุด') && t.includes('วัด 46,196'));
+  assert.ok(t.includes('หมวดอื่นในชุดข้อมูลเดียวกัน ทั้งชุด 440,005 แห่ง'), 'the way back to every group');
   assert.ok(!t.includes('บุคลากร') && !t.includes('ไม่ทราบจำนวน'), 'personnel does not apply to a temple');
   assert.ok(!t.includes('ย้ายและเปิดใหม่'), 'the office moves stay with the offices');
-  assert.equal(unitFor({groups: data.groups, group: 'all'}).aha, 'สถานที่ทุกหมวด');
+  assert.equal(unitFor({groups: data.groups, group: ''}).aha, 'หน่วยงานและสถานที่', 'every group: offices and places');
+  assert.equal(unitFor({groups: data.groups, group: 'all'}).aha, 'หน่วยงานและสถานที่', 'the 0.1.0 value of every group');
+  assert.equal(unitFor({groups: data.groups, group: 'offices'}).aha, 'หน่วยงานรัฐ');
   assert.equal(unitFor({groups: data.groups, group: 'police'}).aha, 'หน่วยงานตำรวจ');
   assert.equal(unitFor({groups: data.groups, metric: 'staff'}).aha, 'บุคลากรที่บันทึก');
+  const wat = data.types.find(t => t.id === '3030'), pol = data.types.find(t => t.id === '1070');
+  assert.deepEqual([unitFor({groups: data.groups, type: wat}).place, unitFor({groups: data.groups, type: pol}).place], ['สถานที่', 'หน่วยงาน'], 'a chosen type speaks of its own group');
+  assert.deepEqual([unitFor({groups: data.groups}).personnel, unitFor({groups: data.groups, group: 'religion'}).personnel], [true, false]);
 });
 
 test('charts: districts by the measure, district × group matrix with equal cells, types by the measure', () => {
@@ -189,7 +220,7 @@ test('charts: districts by the measure, district × group matrix with equal cell
   assert.equal(m.areas.length, 20);
   assert.equal(m.totalAreas, 925);
   assert.equal(m.unplacedValue, 0);
-  assert.deepEqual(m.areas.slice(0, 3).map(a => [a.name, a.value]), [['เมืองนครสวรรค์', 84], ['เมืองเชียงใหม่', 83], ['เมืองชลบุรี', 83]]);
+  assert.deepEqual(m.areas.slice(0, 3).map(a => [a.name, a.value]), [['พุนพิน', 92], ['เมืองเชียงใหม่', 89], ['เมืองนครสวรรค์', 85]]);
   for (let i = 1; i < m.areas.length; i++) assert.ok(m.areas[i - 1].value >= m.areas[i].value);
   const mx = areaMatrix(m);
   assert.equal(mx.groups.length, 6, 'only the groups the selection holds are columns');
@@ -201,7 +232,14 @@ test('charts: districts by the measure, district × group matrix with equal cell
   assert.ok(sm.cells.some(c => c.unknown && c.groupId === 'police' && c.count > 0 && c.value === 0), 'police record no personnel: unknown cells, never a measured 0');
   const tr = typeRanking(data.rows);
   assert.equal(tr.total, 22);
-  assert.deepEqual(tr.types.slice(0, 3).map(x => [x.type.short, x.count]), [['อบต.', 5446], ['จุดบริการตำรวจ', 4544], ['ทต.', 2334]]);
+  assert.deepEqual(tr.types.slice(0, 3).map(x => [x.type.short, x.count]), [['อบต.', 5776], ['จุดบริการตำรวจ', 4626], ['ทต.', 2494]]);
+  // Every point: every group a column under the count; under personnel only the government-office groups.
+  const all = loadAll().data;
+  const am = buildChartModel(all.rows, index, all.groups);
+  assert.deepEqual([am.totalRows, areaMatrix(am).groups.length], [440005, 9]);
+  assert.deepEqual(am.areas.slice(0, 2).map(a => [a.name, a.value]), [['เมืองเชียงราย', 2054], ['เมืองขอนแก่น', 1871]]);
+  assert.equal(areaMatrix(buildChartModel(all.rows, index, all.groups, {metric: 'staff'})).groups.length, 6, 'personnel does not apply to places');
+  assert.equal(typeRanking(all.rows).total, 61);
 });
 
 test('breadcrumb follows production: ประเทศไทย › จังหวัด › เขต/อำเภอ with /D/ deep links and the governmentOfficer dataset', () => {

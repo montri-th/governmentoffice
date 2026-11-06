@@ -88,8 +88,9 @@ export function buildAreaModel(rows, index, {province = '', noDataIds = null, me
   const ramp = buildMetricRamp(summaries.map(s => valueOf(s, metric)), {metric, unit});
   const areas = summaries.map(s => {
     const value = valueOf(s, metric);
-    // EVID-05: offices whose personnel is all unknown are no_data for personnel (unknown is never a measured 0).
-    const unknownOnly = metric === 'staff' && s.count > 0 && !s.staff;
+    // EVID-05: offices whose personnel is all unknown are no_data for personnel (unknown is never a measured 0); a
+    // district with places only (no government office) records no personnel: a measured 0.
+    const unknownOnly = metric === 'staff' && (s.offices ?? s.count) > 0 && !s.staff;
     const c = noDataIds?.has(s.id) || unknownOnly ? classify(null, ramp, 'no_data') : classify(value, ramp);
     return {id: s.id, name: s.name, nameEn: s.nameEn, province: s.province,
       value, count: s.count, staff: s.staff, staffUnknown: s.staffUnknown, types: s.types, km2: s.km2,

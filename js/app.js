@@ -8,10 +8,11 @@
  *   baseRows  — scopeRows narrowed by the selected เขต/อำเภอ (if any).
  *   rows      — baseRows narrowed by the district focus (if any): pins with detail, counters, the table.
  *
- * Group scope (state.group, the หมวด filter): '' = the government offices (ปกครองและท้องถิ่น, ตำรวจ, ดับเพลิง, ศาลและ
- * ยุติธรรม, ทหาร, ยังไม่ระบุหมวด — data/offices.json, loaded at start); one group; or 'all'. The other places of the
- * same production dataset (education, religion and heritage, community) load on demand from data/groups/<group>.json
- * when the reader asks for them; the filter is committed only once its rows are in.
+ * Group scope (state.group, the หมวด filter): '' (default) = every group — every production point of the Government
+ * Officer dataset, as production counts them (release 0.2.0, owner 2026-11-06: “อยากได้ทั้งสี่แสนจุด”); `offices` =
+ * the government offices (ปกครองและท้องถิ่น, ตำรวจ, ดับเพลิง, ศาลและยุติธรรม, ทหาร, ยังไม่ระบุหมวด); or one group. The
+ * government offices arrive with data/offices.json, the other places (education, religion and heritage, community)
+ * with data/groups/<group>.json; the page loads every file before the first paint (the launch card counts them in).
  *
  * Measure (DATA_METHOD.md §2, state.metric): `count` (default) = offices (“แห่ง”, LDS `count`); `staff` = Σ personnel
  * production records at the office (“คน”, LI `li.supply`), for the types that record a count at the site. The map,
@@ -50,7 +51,7 @@
  * Panel modes: overview (+ type card with a ประเภท filter) | area | station | building | office (with a back stack).
  * URL state: filters, metric, area, areas, view, office, station, view3d.
  */
-import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, appendGroupRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, SCOPE_ALL} from './model.js';
+import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, appendGroupRows, rankRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, scopeValue, SCOPE_ALL, SCOPE_OFFICES} from './model.js';
 import {buildAreaIndex, areaWord, areaLocator, recordBounds} from './areas.js';
 import {summarizeAreaInsight, filterAreaRows} from './area-insight.js';
 import {renderInsightChart} from './charts.js';
@@ -77,8 +78,8 @@ import {installTerrain, terrainFacts, terrainChips, TERRAIN} from './terrain.js'
 
 const $ = id => document.getElementById(id);
 const FIELDS = ['search', 'group', 'type', 'province'];
-/** Filters that remove rows from a district (the province does not narrow its own districts; 'all' widens the scope). */
-const narrowing = f => Boolean(f.search || f.type || (f.group && f.group !== SCOPE_ALL));
+/** Filters that remove rows from a district (the province does not narrow its own districts; '' = every group). */
+const narrowing = f => Boolean(f.search || f.type || f.group);
 const BANGKOK = {center: [100.56, 13.735], zoom: 11.5};
 /** Release tag of this module (index.html import map) — also versions the province frame files. */
 const RELEASE = (() => { try { return new URL(import.meta.url).searchParams.get('v') || ''; } catch { return ''; } })();
@@ -91,7 +92,7 @@ const state = {
   data: null, index: null, provincesGeo: null, frames: null,
   scopeRows: [], baseRows: [], rows: [], insight: null,
   view: 'areas', page: 0, metric: 'count', stationById: new Map(), stationProfile: null, stations: null,
-  // The committed group scope ('' offices · a group · 'all'): the select may show a group whose rows are still loading.
+  // The committed group scope ('' every group · 'offices' · a group): the select may show a group still loading.
   group: '', loading: new Map(),
   focusAreaIds: [], autoFocus: true, focusIds: [], selectedArea: '', selectedId: '',
   panel: {mode: 'overview', id: ''}, history: [],
@@ -107,16 +108,18 @@ const state = {
 
 /* ---------- helpers ---------- */
 const values = () => ({search: $('search').value, group: state.group, type: $('type').value, province: $('province').value});
-/** The groups the committed scope holds, and whether they are all government offices (the words follow). */
+/** The groups the committed scope holds (the words, the type list and the symbol key follow them). */
 const scopeGroups = () => groupsOfScope(state.data?.groups || [], state.group);
-const officeScope = () => scopeGroups().every(g => g.office);
 /** Unit words of the measure for the committed scope (js/model.js#unitFor). */
 const unit = () => {
   const f = values();
   return unitFor({metric: state.metric, groups: state.data?.groups || [], group: f.group, type: f.type ? typeById(typeIdOf(f.type)) : null});
 };
-/** Recent moves and openings follow the government offices, without a type or search filter (they carry neither). */
-const eventsShown = () => { const f = values(); return officeScope() && !f.type && !f.search && !f.group; };
+/**
+ * Recent moves and openings are of government offices: shown when the scope holds all of them (every group, or the
+ * government offices), without a type or search filter (they carry neither).
+ */
+const eventsShown = () => { const f = values(); return (f.group === SCOPE_ALL || f.group === SCOPE_OFFICES) && !f.type && !f.search; };
 const rowById = id => state.rowById.get(id) || null;
 const areaById = id => state.index.byId.get(id) || null;
 const stationById = id => (id && state.stationById.get(id)) || null;
@@ -192,7 +195,11 @@ function update({fit = false} = {}) {
   const area = state.selectedArea ? areaById(state.selectedArea) : null;
   const station = state.panel.mode === 'station' ? stationById(state.panel.id) : null;
   state.baseRows = area ? state.scopeRows.filter(r => r.area === area.id) : state.scopeRows;
-  state.insight = summarizeAreaInsight(state.scopeRows, state.index, {metric: state.metric});
+  // The Aha reads the whole scope (up to 440,005 rows): once per scope and measure, not per selection.
+  if (update.insightRows !== state.scopeRows || update.insightMetric !== state.metric) {
+    state.insight = summarizeAreaInsight(state.scopeRows, state.index, {metric: state.metric});
+    update.insightRows = state.scopeRows; update.insightMetric = state.metric;
+  }
   state.focusIds = state.focusAreaIds.length ? state.focusAreaIds : (state.autoFocus && !area && !station ? state.insight.areaIds : []);
   state.rows = state.focusIds.length ? filterAreaRows(state.baseRows, new Set(state.focusIds)) : state.baseRows;
   state.stationProfile = station ? buildStationProfile(station, {scopeRows: state.scopeRows, allRows: state.data.rows, groups: state.data.groups, metric: state.metric, province: stationProvince(station)}) : null;
@@ -225,7 +232,7 @@ function update({fit = false} = {}) {
   const s = summarize(state.rows);
   $('filter-count').textContent = activeFilterCount(f) ? String(activeFilterCount(f)) : '';
   $('filter-chips').innerHTML = renderFilterChips(f, {
-    group: {...Object.fromEntries(state.data.groups.map(g => [g.id, g.th])), [SCOPE_ALL]: 'ทุกหมวดในชุดข้อมูล'},
+    group: {...Object.fromEntries(state.data.groups.map(g => [g.id, g.th])), [SCOPE_OFFICES]: 'หน่วยงานรัฐ'},
     type: Object.fromEntries(state.data.types.map(t => [typeParam(t.id), t.short])), province: Object.fromEntries(provinceList().map(p => [p.code, p.th]))});
   renderPanel(s);
   renderLegend();
@@ -358,6 +365,21 @@ function provinceSummaries() {
   } catch { return []; }
 }
 
+/**
+ * The overview's scope figures (ranks, types, groups, stations, rows without a province), once per scope, province
+ * and measure: a selection, a focus or a camera move re-renders the panel without reading 440,005 rows again.
+ */
+function overviewOf(province, metric) {
+  const events = eventsShown();
+  const c = overviewOf.cache;
+  if (c && c.rows === state.scopeRows && c.province === province && c.metric === metric && c.events === events) return c;
+  const groups = state.data.groups;
+  overviewOf.cache = {rows: state.scopeRows, province, metric, events,
+    overview: buildOverview(state.scopeRows, state.index, {province, groups, metric, events: events ? state.data.events : []}),
+    unknownProvince: province ? 0 : state.scopeRows.filter(r => !r.province).length, stations: stationsOf(state.scopeRows, metric)};
+  return overviewOf.cache;
+}
+
 /** The Aha of a user-chosen focus: the chosen districts and the rows in them. */
 function explicitInsight() {
   const areas = state.focusAreaIds.map(areaById).filter(Boolean).map(a => {
@@ -381,12 +403,12 @@ function renderPanel(summary = summarize(state.rows)) {
   state.renderedSig = panelSpatialSig();
   if (!html) {
     const f = values();
-    const overview = buildOverview(state.scopeRows, state.index, {province: f.province, groups, metric, events: eventsShown() ? state.data.events : []});
+    const scope = overviewOf(f.province, metric);
     const insight = focusMode() === 'explicit' ? explicitInsight() : state.insight;
     const typeCard = f.type ? renderTypeCard(buildTypeProfile(typeIdOf(f.type), {allRows: state.data.rows, scopeRows: state.scopeRows, index: state.index, data: state.data, groups, metric}), ctx) : '';
-    html = renderOverview({insight, summary, overview, focusMode: focusMode(), classOf: countClassOf, provinces: f.province ? [] : provinceSummaries(),
-      unknownProvince: f.province ? 0 : state.scopeRows.filter(r => !r.province).length, province: f.province, group: f.group, typeCard, groups,
-      stations: stationsOf(state.scopeRows, metric), ctx});
+    html = renderOverview({insight, summary, overview: scope.overview, focusMode: focusMode(), classOf: countClassOf, provinces: f.province ? [] : provinceSummaries(),
+      unknownProvince: f.province ? 0 : scope.unknownProvince, province: f.province, group: f.group, typeCard, groups,
+      stations: scope.stations, ctx});
     renderMapAha(insight);
   } else {
     $('map-aha').hidden = true;
@@ -524,13 +546,12 @@ function selectOffice(id, {fly = true, showPopup = false, fromPin = false} = {})
   // The Hotel rule of 2026-11-02: a pin always opens the 2-point view of a 3D building mass.
   if (hasPoint(r)) ensure3d();
   if (state.panel.mode !== 'office') pushHistory();
-  // A row outside the filters (nearby lists and services read every loaded row): clear the filters to keep it in
-  // scope — its own group when it is not a government office (a temple stays a temple's scope), 'all' kept.
+  // A row outside the filters (nearby lists and services read every loaded row): clear the filters — every group,
+  // the default scope, holds it.
   const outside = !state.scopeRows.includes(r);
   if (outside) {
-    const keepAll = state.group === SCOPE_ALL;
     for (const k of FIELDS) $(k).value = '';
-    commitGroup(keepAll ? SCOPE_ALL : r.office ? '' : r.groupId);
+    commitGroup(SCOPE_ALL);
     state.selectedArea = '';
   }
   state.panel = {mode: 'office', id};
@@ -905,9 +926,9 @@ function resetToOverview({fit = true} = {}) {
 }
 
 function clearFilter(key) {
-  if (key === 'all') { $('filters').reset(); commitGroup(''); resetToOverview(); return; }
-  if (key === 'group') { $('group').value = ''; commitGroup(''); }
-  else if (FIELDS.includes(key)) $(key).value = '';
+  if (key === 'all') { $('filters').reset(); commitGroup(SCOPE_ALL); resetToOverview(); return; }
+  if (key === 'group') { setGroup(SCOPE_ALL); return; }
+  if (FIELDS.includes(key)) $(key).value = '';
   update({fit: key !== 'search'});
 }
 
@@ -915,25 +936,27 @@ function clearFilter(key) {
 
 /**
  * Load the rows of the groups a scope value asks for (data/groups/<group>.json, versioned by the file's SHA-256 in
- * data/offices.json); resolves once every one is in. Each file is fetched once; a failure rejects and leaves the
- * dataset as it was.
+ * data/offices.json); resolves once every one is in (importance ranked once, over every loaded row). Each file is
+ * fetched once; a failure rejects and leaves the dataset as it was. `onFile(done, total)` follows the files in.
  */
-function ensureGroups(value) {
+function ensureGroups(value, {onFile = null} = {}) {
   const need = groupsOfScope(state.data.groups, value).filter(g => !g.loaded && g.file);
   if (!need.length) return null;
+  let done = 0;
   return Promise.all(need.map(g => {
     if (!state.loading.has(g.id)) {
       const job = fetchJSON(`${g.file}?v=${(g.sha256 || RELEASE).slice(0, 8)}`, {timeout: 180000}).then(json => {
         if (g.loaded) return;
-        const n = appendGroupRows(state.data, json, state.index);
+        const before = state.data.rows.length;
+        const n = appendGroupRows(state.data, json, state.index, {rank: false});
         if (n !== g.rows) console.warn('Group rows differ from the dataset count', g.id, n, g.rows);
-        for (const r of state.data.rows) if (!state.rowById.has(r.id)) state.rowById.set(r.id, r);
+        for (let i = before; i < state.data.rows.length; i++) state.rowById.set(state.data.rows[i].id, state.data.rows[i]);
         provinceScopeRows.key = '';
       }).finally(() => state.loading.delete(g.id));
       state.loading.set(g.id, job);
     }
-    return state.loading.get(g.id);
-  }));
+    return state.loading.get(g.id).then(() => onFile?.(++done, need.length));
+  })).then(() => rankRows(state.data));
 }
 
 /** Commit a group scope whose rows are loaded: the type list and the option counts follow it. */
@@ -958,13 +981,13 @@ function loadNote(text) {
  * map and the panel keep the committed scope), then commit and update. A later choice wins over an earlier one.
  */
 async function setGroup(value, {keepPanel = false} = {}) {
-  const v = value === SCOPE_ALL || groupById(value) ? value : '';
+  const v = scopeValue(value, state.data.groups);
   $('group').value = v;
   const ticket = (setGroup.ticket = (setGroup.ticket || 0) + 1);
   const pending = ensureGroups(v);
   if (pending) {
     const rows = groupsOfScope(state.data.groups, v).filter(g => !g.loaded).reduce((n, g) => n + g.rows, 0);
-    loadNote(`กำลังโหลด${v === SCOPE_ALL ? 'ทุกหมวด' : groupById(v)?.th || ''} ${num(rows)} แห่ง…`);
+    loadNote(`กำลังโหลด${v === SCOPE_ALL ? 'ทุกหมวด' : v === SCOPE_OFFICES ? 'หน่วยงานรัฐ' : groupById(v)?.th || ''} ${num(rows)} แห่ง…`);
     announce('กำลังโหลดข้อมูลหมวดที่เลือก');
     try { await pending; }
     catch (e) {
@@ -989,7 +1012,7 @@ async function filterType(value) {
   if (!t) return;
   const g = t.group;
   const inScope = scopeGroups().some(x => x.id === g?.id);
-  if (!inScope && g) await setGroup(g.office ? '' : g.id);
+  if (!inScope && g) await setGroup(SCOPE_ALL);
   if (!scopeGroups().some(x => x.id === g?.id)) return;
   syncTypeOptions();
   $('type').value = typeParam(t.id);
@@ -1025,7 +1048,11 @@ function syncMetricSwitch() {
     const on = b.dataset.metric === state.metric;
     b.setAttribute('aria-checked', String(on));
     b.tabIndex = on ? 0 : -1;
-    if (b.dataset.metric === 'count') b.textContent = officeScope() ? 'หน่วยงาน' : 'สถานที่';
+    // The count option names what is counted in the scope (หน่วยงาน · หน่วยงานและสถานที่ · สถานที่), whatever the measure.
+    if (b.dataset.metric === 'count') {
+      const f = values();
+      b.textContent = unitFor({metric: 'count', groups: state.data.groups, group: f.group, type: f.type ? typeById(typeIdOf(f.type)) : null}).label;
+    }
     if (b.dataset.metric === 'staff') {
       b.disabled = !staffOK && state.metric !== 'staff';
       b.title = staffOK ? 'บุคลากรที่ production บันทึกที่หน่วยงาน' : 'ไม่มีบุคลากรที่บันทึกในหมวดนี้';
@@ -1094,7 +1121,8 @@ const provinceZoom = () => belowAreaZoom() && !$('province').value;
 function renderLegend() {
   const u = unit(), atProvince = provinceZoom(), steps = $('legend-steps');
   const m = atProvince ? state.provinceModel : state.areaModel;
-  $('legend-title').textContent = atProvince ? `จังหวัด · ${u.label}` : `เขต/อำเภอ · ${u.label}`;
+  // The measure's word stays on one line (หน่วยงานและสถานที่ is one reading, never split at สถาน|ที่ on a phone).
+  $('legend-title').innerHTML = `${atProvince ? 'จังหวัด' : 'เขต/อำเภอ'} · <span class="nowrap">${esc(u.label)}</span>`;
   // All 41 LDS samples with value ticks (owner standing rule), plus the measured-zero swatch when zero occurs.
   steps.innerHTML = m?.ramp?.levels.length
     ? rampLegendHTML(m.ramp, {zero: m.zeroCount > 0, zeroTitle: `0 ${u.one} ในตัวกรองนี้`})
@@ -1105,7 +1133,7 @@ function renderLegend() {
     : `${u.label}รวมต่อเขต/อำเภอ · สีเข้ม = มาก`;
   // Symbols are sized by recorded personnel: the key only where the scope holds government offices.
   $('legend-pin-label').innerHTML = sizeKeyHTML();
-  $('legend-pin').hidden = !officeScope();
+  $('legend-pin').hidden = !u.personnel;
   const terrainItem = $('legend-terrain');
   if (terrainItem) terrainItem.hidden = !state.terrainActive;
   // Which outlines the focus buildings come from (owner 2026-11-01, point 3): CityMETER Building V4 inside CityMETER units.
@@ -1686,7 +1714,7 @@ function watchFreeBox() {
 
 /** Thai labels for the map's own controls. */
 const MAP_LOCALE = {
-  'Map.Title': 'แผนที่หน่วยงานรัฐและบุคลากร', 'NavigationControl.ZoomIn': 'ซูมเข้า', 'NavigationControl.ZoomOut': 'ซูมออก',
+  'Map.Title': 'แผนที่หน่วยงานรัฐ สถานที่ และบุคลากร', 'NavigationControl.ZoomIn': 'ซูมเข้า', 'NavigationControl.ZoomOut': 'ซูมออก',
   'NavigationControl.ResetBearing': 'หมุนกลับทิศเหนือ (ลากเพื่อหมุนหรือเอียง)', 'Popup.Close': 'ปิด', 'AttributionControl.ToggleAttribution': 'แสดงหรือซ่อนที่มาของแผนที่',
 };
 
@@ -1818,8 +1846,8 @@ function setOptions(id, items) {
 }
 
 /**
- * The หมวด options: the government offices (default), each group with its national count from the dataset
- * (data/offices.json `groups`; the other places load when chosen), and every group at once.
+ * The หมวด options: every group (default — every production point), the government offices together and one by one,
+ * and the other places of the same dataset, each with its national count (data/offices.json `groups`).
  */
 function refreshGroupOptions() {
   const offices = state.data.groups.filter(g => g.office), places = state.data.groups.filter(g => !g.office);
@@ -1827,13 +1855,13 @@ function refreshGroupOptions() {
   const s = $('group');
   s.replaceChildren();
   const option = (value, label, parent = s) => { const o = document.createElement('option'); o.value = value; o.textContent = label; parent.append(o); };
-  option('', `หน่วยงานรัฐทุกหมวด (${num(offices.reduce((n, g) => n + g.rows, 0))})`);
+  option(SCOPE_ALL, `ทุกหมวด (${num(total)})`);
   const og = document.createElement('optgroup'); og.label = 'หน่วยงานรัฐ'; s.append(og);
+  option(SCOPE_OFFICES, `หน่วยงานรัฐทุกหมวด (${num(offices.reduce((n, g) => n + g.rows, 0))})`, og);
   for (const g of offices) option(g.id, `${g.th} (${num(g.rows)})`, og);
   if (places.length) {
     const pg = document.createElement('optgroup'); pg.label = 'สถานที่อื่นในชุดข้อมูลเดียวกัน'; s.append(pg);
     for (const g of places) option(g.id, `${g.th} (${num(g.rows)})`, pg);
-    option(SCOPE_ALL, `ทุกหมวดในชุดข้อมูล (${num(total)})`, pg);
   }
   s.value = state.group;
 }
@@ -1870,15 +1898,14 @@ function refreshCategoryKey() {
 
 /**
  * Filters and views from the URL. The group scope is returned (not committed): its rows may have to load first;
- * the office (?office=) is resolved once they are in (resolveDeepLinks).
+ * the office (?office=) is resolved once they are in (resolveDeepLinks). `group=all` (0.1.0) is every group.
  */
 function restoreFromURL() {
   const p = new URLSearchParams(location.search);
-  let group = p.get('group') || '';
-  if (group !== SCOPE_ALL && !groupById(group)) group = '';
-  // A type outside the group scope brings its group (an old link may carry the type alone).
+  let group = scopeValue(p.get('group'), state.data.groups);
+  // A type outside the group scope widens it to every group (an old link may carry the type alone).
   const type = p.has('type') ? typeById(typeIdOf(p.get('type'))) : null;
-  if (type && group !== SCOPE_ALL && type.group && type.group.id !== group && !(type.group.office && !group)) group = type.group.office ? '' : type.group.id;
+  if (type && type.group && !groupsOfScope(state.data.groups, group).includes(type.group)) group = SCOPE_ALL;
   if (p.has('search')) $('search').value = p.get('search');
   if (p.has('province')) { const v = provinceCodeFrom(p.get('province')); if ([...$('province').options].some(o => o.value === v)) $('province').value = v; }
   if (['areas', 'mix', 'types'].includes(p.get('view'))) state.view = p.get('view');
@@ -1998,13 +2025,13 @@ async function init() {
     refreshGroupOptions();
     refreshProvinceCounts();
     const fromURL = restoreFromURL();
-    // A link to another group's places loads them before the first paint (the launch screen says so).
-    const pending = ensureGroups(fromURL.group);
-    if (pending) {
-      const g = fromURL.group === SCOPE_ALL ? null : groupById(fromURL.group);
-      window.dispatchEvent(new CustomEvent('citymeter:progress', {detail: {message: `กำลังโหลด${g ? g.th : 'ทุกหมวดในชุดข้อมูล'}`}}));
-      try { await pending; } catch (e) { console.warn('Group rows unavailable', fromURL.group, e); fromURL.group = ''; }
-    }
+    // Every production point before the first paint (the default scope is every group): the launch card counts the
+    // files in. A group file that cannot load stops the start with a retry (never a first screen over part of the data).
+    const total = state.data.groups.reduce((n, g) => n + g.rows, 0);
+    const progress = (done, files) => window.dispatchEvent(new CustomEvent('citymeter:progress', {detail: {
+      message: `กำลังโหลดหน่วยงานและสถานที่ ${num(total)} แห่ง${files ? ` · ${num(done)} จาก ${num(files)} หมวด` : ''}`}}));
+    const pending = ensureGroups(SCOPE_ALL, {onFile: progress});
+    if (pending) { progress(0, state.data.groups.filter(g => !g.loaded && g.file).length); await pending; }
     commitGroup(fromURL.group);
     resolveDeepLinks(fromURL);
     $('toggle-3d').setAttribute('aria-pressed', String(state.view3d));

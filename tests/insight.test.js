@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {load} from './helpers.js';
+import {load, loadAll} from './helpers.js';
 import {summarizeAreaInsight, filterAreaRows, RAIL_M} from '../js/area-insight.js';
 import {levelWords, areaLabel} from '../js/areas.js';
 import {filterRows} from '../js/model.js';
@@ -8,31 +8,43 @@ import {buildAreaModel} from '../js/map-layers.js';
 import {buildProvinceModel} from '../js/provinces.js';
 import {SUPPLY_SCALE, COUNT_SCALE} from '../js/scales.js';
 
-// Snapshot values are regression fixtures of the 2026-11-06 build, never UI constants.
-test('first Aha (snapshot fixture, offices): the three อำเภอ with the most government offices in the province holding the most', () => {
-  const {data, index} = load();
+// Snapshot values are regression fixtures of the 2026-11-06 build (release 0.2.0: every production point is a row),
+// never UI constants.
+test('first Aha (snapshot fixture, every point): the three อำเภอ with the most of the dataset in the province holding the most', () => {
+  const {data, index} = loadAll();
   const a = summarizeAreaInsight(data.rows, index);
-  assert.equal(a.metric, 'count', 'offices are the default measure');
+  assert.equal(a.metric, 'count', 'points (แห่ง) are the default measure');
   assert.equal(a.home, 'NMA');
-  assert.deepEqual(a.areas.map(x => [x.id, x.name, x.value]), [['3001', 'เมืองนครราชสีมา', 69], ['3014', 'ปักธงชัย', 47], ['3020', 'สีคิ้ว', 42]]);
-  assert.deepEqual([a.value, a.homePlacedValue, a.homeValue, Math.round(a.share)], [158, 715, 715, 22], 'the share is of the province\'s whole total');
+  assert.deepEqual(a.areas.map(x => [x.id, x.name, x.value]), [['3001', 'เมืองนครราชสีมา', 1185], ['3014', 'ปักธงชัย', 1150], ['3008', 'ด่านขุนทด', 1131]]);
+  assert.deepEqual([a.value, a.homePlacedValue, a.homeValue, Math.round(a.share)], [3466, 20003, 20003, 17], 'the share is of the province\'s whole total');
   assert.equal(a.homeAreaIds.length, 32);
   // Rail (CityMETER · Transit): no operating station in Nakhon Ratchasima — the panel hides the rail comparison.
   assert.equal(RAIL_M, 500);
-  assert.deepEqual([a.rail.focus.within, a.rail.focus.base, a.rail.rest.within, a.rail.rest.base], [0, 158, 0, 557]);
-  // The district with the most offices outside the province holds more than any district of it.
-  assert.deepEqual([a.outside.id, a.outside.name, a.outside.province, a.outside.value], ['6001', 'เมืองนครสวรรค์', 'NSN', 84]);
+  assert.deepEqual([a.rail.focus.within, a.rail.focus.base, a.rail.rest.within, a.rail.rest.base], [0, 3466, 0, 16537]);
+  // The district with the most outside the province holds more than any district of it.
+  assert.deepEqual([a.outside.id, a.outside.name, a.outside.province, a.outside.value], ['5701', 'เมืองเชียงราย', 'CRI', 2054]);
   assert.ok(a.outside.value > a.areas[0].value);
   assert.deepEqual(filterAreaRows(data.rows, new Set(a.areaIds)).length, a.count);
 });
 
-test('personnel Aha: Chonburi holds the most personnel recorded at district level; unknown personnel is counted apart', () => {
+test('government offices (one filter): the three อำเภอ with the most offices in the province holding the most', () => {
   const {data, index} = load();
+  const a = summarizeAreaInsight(filterRows(data.rows, {group: 'offices'}), index);
+  assert.equal(a.home, 'NMA');
+  assert.deepEqual(a.areas.map(x => [x.id, x.name, x.value]), [['3001', 'เมืองนครราชสีมา', 74], ['3014', 'ปักธงชัย', 47], ['3020', 'สีคิ้ว', 44]]);
+  assert.deepEqual([a.value, a.homeValue, Math.round(a.share)], [165, 744, 22]);
+  assert.deepEqual([a.outside.id, a.outside.name, a.outside.province, a.outside.value], ['8417', 'พุนพิน', 'SNI', 92]);
+});
+
+test('personnel Aha: Chonburi holds the most personnel recorded at district level; unknown personnel is counted apart', () => {
+  const {data, index} = loadAll();
   const s = summarizeAreaInsight(data.rows, index, {metric: 'staff'});
   assert.equal(s.home, 'CBI');
   assert.deepEqual(s.areas.map(x => [x.name, x.value]), [['เมืองชลบุรี', 5897], ['ศรีราชา', 4665], ['สัตหีบ', 3752]]);
-  assert.deepEqual([s.value, s.homeValue, s.count, s.homePlaced, s.homeStaffUnknown], [14314, 21533, 190, 385, 199]);
+  assert.deepEqual([s.value, s.homeValue, s.count, s.homePlaced, s.homeStaffUnknown], [14314, 21533, 1633, 4869, 206]);
   assert.deepEqual([s.outside.name, s.outside.value], ['เมืองลพบุรี', 9101]);
+  const offices = summarizeAreaInsight(filterRows(data.rows, {group: 'offices'}), index, {metric: 'staff'});
+  assert.deepEqual([offices.value, offices.homeValue, offices.count, offices.homeStaffUnknown], [14314, 21533, 204, 206], 'places add no personnel and are never unknown');
 });
 
 test('the focus never cuts through a tie; a province where every district holds the same value is “spread”', () => {
@@ -69,10 +81,13 @@ test('district model: EVID-05 — a district without an office is a measured 0; 
   const count = buildAreaModel(data.rows, index);
   assert.equal(count.areas.length, 928);
   assert.equal(count.ramp.scaleId, COUNT_SCALE.scaleId);
-  assert.deepEqual([count.ramp.min, count.ramp.max, count.ramp.steps], [1, 84, 41]);
+  assert.deepEqual([count.ramp.min, count.ramp.max, count.ramp.steps], [1, 92, 41]);
   assert.equal(count.zeroCount, 3, 'three districts hold no government office: measured zero, not no data');
   assert.ok(count.areas.filter(a => a.state === 'measured_zero').every(a => a.count === 0));
-  assert.equal(count.byId.get('6001').fill, COUNT_SCALE.lut[40], 'เมืองนครสวรรค์ (the national maximum) closes the ramp on sample 40');
+  assert.equal(count.byId.get('8417').fill, COUNT_SCALE.lut[40], 'พุนพิน (the national maximum of offices) closes the ramp on sample 40');
+  const every = buildAreaModel(loadAll().data.rows, index);
+  assert.deepEqual([every.ramp.min, every.ramp.max, every.ramp.steps, every.zeroCount], [1, 2054, 41, 3], 'every point: 41 samples up to เมืองเชียงราย');
+  assert.equal(every.byId.get('5701').fill, COUNT_SCALE.lut[40]);
   const staff = buildAreaModel(data.rows, index, {metric: 'staff'});
   assert.equal(staff.ramp.scaleId, SUPPLY_SCALE.scaleId);
   assert.deepEqual([staff.ramp.min, staff.ramp.max], [2, 9101]);
@@ -82,6 +97,9 @@ test('district model: EVID-05 — a district without an office is a measured 0; 
   const unknown = [{id: 'u1', area: '1001', province: 'BKK', staff: null, office: true}, {id: 'k1', area: '1033', province: 'BKK', staff: 120, office: true}];
   assert.equal(buildAreaModel(unknown, index, {province: 'BKK', metric: 'staff'}).byId.get('1001').state, 'no_data');
   assert.equal(buildAreaModel(unknown, index, {province: 'BKK', metric: 'count'}).byId.get('1001').state, 'measured');
+  // A district with places only (no government office) records no personnel: a measured 0, not unknown.
+  const places = [{id: 'p1', area: '1001', province: 'BKK', staff: null, office: false}, ...unknown.slice(1)];
+  assert.equal(buildAreaModel(places, index, {province: 'BKK', metric: 'staff'}).byId.get('1001').state, 'measured_zero');
 });
 
 test('province frames total the measure per province; every province holds an office', () => {

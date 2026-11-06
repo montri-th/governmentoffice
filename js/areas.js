@@ -57,14 +57,34 @@ export function groupBy(rows, key) {
 }
 
 function stats(rows) {
-  let points = 0, staff = 0, staffUnknown = 0, staffShared = 0;
+  let points = 0, staff = 0, staffUnknown = 0, staffShared = 0, offices = 0;
   const types = new Set();
   for (const r of rows) {
     if (Number.isFinite(r.latitude)) points++;
     if (r.type) types.add(r.type.id);
-    if (r.staff) staff += r.staff; else if (r.staffShared) staffShared++; else staffUnknown++;
+    if (r.office) offices++;
+    // Places of the other groups add nothing here: personnel does not apply to them.
+    if (r.staff) staff += r.staff; else if (r.staffShared) staffShared++; else if (r.office) staffUnknown++;
   }
-  return {points, types: types.size, staff, staffUnknown, staffShared};
+  return {points, types: types.size, staff, staffUnknown, staffShared, offices};
+}
+
+/**
+ * Rows per district and their totals, once per rows array: a scope (up to 440,005 rows) is grouped once and every
+ * later summary of the same array reads the cache (an array that grew since is grouped again).
+ */
+const AREA_CACHE = new WeakMap();
+function areaStatsOf(rows) {
+  let c = AREA_CACHE.get(rows);
+  if (!c || c.n !== rows.length) {
+    const by = new Map();
+    for (const r of rows) { if (!r.area) continue; let a = by.get(r.area); if (!a) by.set(r.area, a = []); a.push(r); }
+    const st = new Map();
+    for (const [k, members] of by) st.set(k, stats(members));
+    c = {n: rows.length, by, st};
+    AREA_CACHE.set(rows, c);
+  }
+  return c;
 }
 
 /**
@@ -72,13 +92,14 @@ function stats(rows) {
  * province) is listed, zero included.
  */
 export function summarizeAreas(rows, index, {includeEmpty = false, province = '', grouped = null} = {}) {
-  const by = grouped || groupBy(rows.filter(r => r.area), r => r.area);
+  const cached = grouped ? null : areaStatsOf(rows);
+  const by = grouped || cached.by;
   const list = [];
   for (const area of index.areas) {
     if (province && area.province !== province) continue;
     const members = by.get(area.id) || [];
     if (!includeEmpty && !members.length) continue;
-    list.push({...area, rows: members, count: members.length, ...stats(members)});
+    list.push({...area, rows: members, count: members.length, ...(cached?.st.get(area.id) || stats(members))});
   }
   return list;
 }

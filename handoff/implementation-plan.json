@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.1.0",
+ "productVersion": "0.2.0",
  "updatedOn": "2026-11-06",
  "documentType": "implementation-plan",
  "architecture": {
@@ -274,7 +274,7 @@
   {
    "id": "A1",
    "scenario": "decode offices.json",
-   "expected": "19,721 office rows, nothing dropped, keys unique, every tab hashed",
+   "expected": "440,005 rows = 440,005 production points (20,568 government offices in data/offices.json + 419,437 places in data/groups/), nothing dropped, keys unique, every tab hashed",
    "verificationType": "unit (tests/data.test.js)"
   },
   {
@@ -322,7 +322,7 @@
   {
    "id": "A9",
    "scenario": "first Aha",
-   "expected": "22% ของหน่วยงานรัฐในนครราชสีมา (158 จาก 715 แห่ง) อยู่ใน 3 อำเภอนี้; outside เมืองนครสวรรค์ 84",
+   "expected": "every point: 17% ของหน่วยงานและสถานที่ในนครราชสีมา (3,466 จาก 20,003 แห่ง) อยู่ใน 3 อำเภอนี้; outside เมืองเชียงราย 2,054 · ?group=offices: 22% ของหน่วยงานรัฐในนครราชสีมา (165 จาก 744 แห่ง); outside พุนพิน 92",
    "verificationType": "unit (tests/insight.test.js, tests/views.test.js)"
   },
   {
@@ -370,7 +370,7 @@
   {
    "id": "A17",
    "scenario": "release",
-   "expected": "one cache tag ?v=20261106-r1; one product version 0.1.0; handoff JSON valid",
+   "expected": "one cache tag ?v=20261106-r2; one product version 0.2.0; handoff JSON valid",
    "verificationType": "unit (tests/release.test.js)"
   },
   {

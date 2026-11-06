@@ -25,6 +25,8 @@ export const DETAIL_MIN_ZOOM = 15.5;
 /** Largest quiet context dot (px of radius): context stays quiet at every zoom. */
 export const CONTEXT_MAX_RADIUS = 6;
 export const MAX_DETAIL_PINS = 320;
+/** Longest wait for the map's first idle before the quiet context of a large scope is handed to the worker. */
+export const CONTEXT_DEFER_MS = 6000;
 export const PIN_LAYERS = Object.freeze({context: 'office-context', focus: 'office-focus', selected: 'office-selected'});
 const SOURCES = {context: 'office-context', focus: 'office-focus', selected: 'office-selected'};
 
@@ -42,9 +44,10 @@ function cssVar(name, fallback) {
 export function seriesColors(count = 10) {
   return Array.from({length: count}, (_, i) => cssVar(`--series-${i + 1}-fill`, '#8AA4AA'));
 }
+/** Quiet dots: filled, an open ring only for a government office with unknown personnel (`h`), like the focus symbols. */
 const contextPaint = () => {
   const muted = cssVar('--text-muted', '#7B877D');
-  return {'circle-color': ['case', ['>', ['get', 'r'], 0], muted, 'rgba(0,0,0,0)'], 'circle-stroke-color': muted};
+  return {'circle-color': ['case', ['==', ['get', 'h'], 1], 'rgba(0,0,0,0)', muted], 'circle-stroke-color': muted};
 };
 const ICON = series => `office-cue-${series}`;
 const ICON_HOLLOW = series => `office-cue-${series}-hollow`;
@@ -72,6 +75,24 @@ export function pointCollection(rows) {
     features.push({type: 'Feature', geometry: {type: 'Point', coordinates: [r.longitude, r.latitude]},
       properties: {k: r.id, s: r.series, z: pinSizeOf(r.staff), r: Number.isFinite(r.staff) && r.staff > 0 ? r.staff : 0, h: hollowOf(r) ? 1 : 0}});
   }
+  return {type: 'FeatureCollection', features};
+}
+/**
+ * The quiet context as GeoJSON for the worker, only what its layer reads (r = personnel for the size and the order,
+ * h = hollow). Every production point of the scope (440,005 at most) crosses to the worker on a filter change, so
+ * the dots that look the same — no recorded personnel, filled or hollow — travel as one MultiPoint each; a row with
+ * recorded personnel keeps its own point (its size). Display only: a context dot is never a target.
+ */
+export function contextCollection(rows) {
+  const features = [], filled = [], hollow = [];
+  for (const r of rows) {
+    if (!hasPoint(r)) continue;
+    const staff = Number.isFinite(r.staff) && r.staff > 0 ? r.staff : 0;
+    if (staff) features.push({type: 'Feature', geometry: {type: 'Point', coordinates: [r.longitude, r.latitude]}, properties: {r: staff, h: 0}});
+    else (hollowOf(r) ? hollow : filled).push([r.longitude, r.latitude]);
+  }
+  if (filled.length) features.push({type: 'Feature', geometry: {type: 'MultiPoint', coordinates: filled}, properties: {r: 0, h: 0}});
+  if (hollow.length) features.push({type: 'Feature', geometry: {type: 'MultiPoint', coordinates: hollow}, properties: {r: 0, h: 1}});
   return {type: 'FeatureCollection', features};
 }
 
@@ -134,8 +155,9 @@ export function detailCandidates(rows, project, bounds, limit = MAX_DETAIL_PINS)
  * options.onLayout(stats) after each layout.
  */
 export function installBranchPins(map, container, {onSelect, onLayout, onHover, reservedBottom = () => 90} = {}) {
-  let focusRows = [], contextRows = [], focusById = new Map(), contextById = new Map(), selectedId = '', hoveredId = '', activeId = '', entries = [], frame = 0, detailKeys = [];
-  const rowOf = id => focusById.get(id) || contextById.get(id);
+  let focusRows = [], contextRows = [], contextPoints = 0, focusById = new Map(), selectedId = '', hoveredId = '', activeId = '', entries = [], frame = 0, detailKeys = [];
+  // A context row is looked up only when it is selected (rare): no map over every point of the scope.
+  const rowOf = id => focusById.get(id) || (id ? contextRows.find(r => r.id === id && hasPoint(r)) : null) || null;
 
   map.addSource(SOURCES.context, {type: 'geojson', data: {type: 'FeatureCollection', features: []}, maxzoom: GEOJSON_MAXZOOM});
   map.addSource(SOURCES.focus, {type: 'geojson', data: {type: 'FeatureCollection', features: []}, maxzoom: GEOJSON_MAXZOOM});
@@ -304,22 +326,27 @@ export function installBranchPins(map, container, {onSelect, onLayout, onHover, 
    * order, not clickable). Focus symbols are drawn above and cover their own dot, so the context
    * only changes with the filters: a selection (area, station, building, office) re-sends the focus
    * rows only and never the context points (smooth area-to-area moves).
-   * On the first draw a large context is handed to the worker a moment after the focus, so the
-   * focused pins and the area fills are not queued behind its index build.
+   * On the first draw a large context is handed to the worker once the map has drawn the focus and the area fills
+   * (its first idle, else after CONTEXT_DEFER_MS), so they are not queued behind its index build.
    */
   let contextTimer = 0, firstContext = true, sentContext = null, contextOnly = 0;
   function update(focus, {context = []} = {}) {
     focusRows = focus.filter(hasPoint);
     focusById = new Map(focusRows.map(r => [r.id, r]));
-    // Only rows with a published point are drawn as context dots (most rows have none).
-    if (context !== contextRows) { contextRows = context; contextById = new Map(contextRows.filter(hasPoint).map(r => [r.id, r])); }
-    contextOnly = Math.max(0, contextById.size - focusRows.filter(r => contextById.has(r.id)).length);
+    // Only rows with a published point are drawn as context dots; the focus rows are part of the scope.
+    if (context !== contextRows) { contextRows = context; contextPoints = 0; for (const r of contextRows) if (hasPoint(r)) contextPoints++; }
+    contextOnly = Math.max(0, contextPoints - focusRows.length);
     map.getSource(SOURCES.focus)?.setData(pointCollection(focusRows));
     clearTimeout(contextTimer);
-    const sendContext = () => { firstContext = false; sentContext = contextRows; map.getSource(SOURCES.context)?.setData(pointCollection(contextRows)); };
+    const sendContext = () => { firstContext = false; sentContext = contextRows; map.getSource(SOURCES.context)?.setData(contextCollection(contextRows)); };
     if (sentContext !== contextRows) {
-      if (firstContext && contextRows.length > 5000) contextTimer = setTimeout(sendContext, 900);
-      else sendContext();
+      if (firstContext && contextRows.length > 5000) {
+        let sent = false;
+        const once = () => { if (sent) return; sent = true; clearTimeout(contextTimer); if (sentContext !== contextRows) sendContext(); };
+        contextTimer = setTimeout(once, CONTEXT_DEFER_MS);
+        // The fills and the focus symbols first: the next idle after they were handed over (a moment later at least).
+        setTimeout(() => map.once('idle', once), 900);
+      } else sendContext();
     }
     clearDetail();
     schedule();
@@ -334,16 +361,15 @@ export function installBranchPins(map, container, {onSelect, onLayout, onHover, 
   }
 
   /**
-   * The focus row under a screen point, or null. Quiet context dots are not targets: a click in
+   * The focus row under a screen point, or null. Quiet context dots are not targets (they carry no key): a click in
    * the quiet context goes to the district underneath (move to that เขต/อำเภอ), never to a random row.
-   * `{context: true}` also tests the dots (diagnostics only).
    */
-  function hitTest(point, {radius = 6, context = false} = {}) {
+  function hitTest(point, {radius = 6} = {}) {
     const box = [[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]];
-    const hits = map.queryRenderedFeatures(box, {layers: [PIN_LAYERS.focus, ...(context ? [PIN_LAYERS.context] : [])].filter(id => map.getLayer(id))});
+    const hits = map.queryRenderedFeatures(box, {layers: [PIN_LAYERS.focus].filter(id => map.getLayer(id))});
     let best = null, bestD = Infinity;
     for (const f of hits) {
-      const r = f.layer.id === PIN_LAYERS.focus ? focusById.get(f.properties?.k) : contextById.get(f.properties?.k);
+      const r = focusById.get(f.properties?.k);
       if (!r) continue;
       const p = map.project([r.longitude, r.latitude]), d = (p.x - point.x) ** 2 + (p.y - point.y) ** 2 + (f.layer.id === PIN_LAYERS.focus ? 0 : 4);
       if (d < bestD) { bestD = d; best = r; }

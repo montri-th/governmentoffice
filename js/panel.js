@@ -69,6 +69,20 @@ const staffTile = (staff, count, label = 'บุคลากร') => (staff || !
   : metricTile('—', label, 'staff', 'ไม่ทราบจำนวนบุคลากร'));
 /** "1,200 คน", or “ไม่ทราบจำนวนบุคลากร” for offices whose personnel is all unknown (never “0 คน”). */
 const staffOf = (staff, count = 1) => (staff ? `${num(staff)} คน` : count ? 'ไม่ทราบจำนวนบุคลากร' : '0 คน');
+/**
+ * The personnel tile of a selection where personnel applies (a government office in it, `offices`): its recorded
+ * total or “—”; nothing for a selection of places only (education, religion, community — personnel does not apply).
+ */
+const staffTileOf = (p, unit, label) => {
+  const offices = p?.offices ?? p?.count ?? 0;
+  return unit?.personnel !== false && offices > 0 ? staffTile(p.staff, offices, label) : '';
+};
+/** Personnel beside an office count in a list: recorded, unknown (government offices only), or nothing for places. */
+const staffNote = (x, unit) => {
+  if (unit?.personnel === false) return '';
+  const offices = x.offices ?? x.count;
+  return x.staff ? `${num(x.staff)} คน` : offices ? 'ไม่ทราบจำนวนบุคลากร' : '';
+};
 export const heading = (kind, text, id = '') => `<h3${id ? ` id="${esc(id)}"` : ''}>${pic(kind)}${esc(text)}</h3>`;
 
 const provinceName = code => provinceByCode(code)?.th || code || '';
@@ -80,8 +94,8 @@ export const words = areas => {
   return p.size === 1 ? areaWord([...p][0]) : 'เขต/อำเภอ';
 };
 const valueText = (v, unit) => nw(`<strong class="data-number">${num(v)}</strong> ${esc(unit.one)}`);
-/** The heading of the group bars: หมวดหน่วยงาน for government offices, หมวด when other places are in the scope. */
-const groupWord = unit => (unit?.place === 'สถานที่' ? 'หมวด' : 'หมวดหน่วยงาน');
+/** The heading of the group bars: หมวดหน่วยงาน for government offices only, หมวด when places are in the scope. */
+const groupWord = unit => (unit?.offices === false || unit?.place === 'สถานที่' ? 'หมวด' : 'หมวดหน่วยงาน');
 /** An office's personnel in a list: recorded, counted at its organisation's other office, or unknown. */
 export const staffText = r => (r?.staff ? `${num(r.staff)} คน` : r?.staffShared ? 'บุคลากรนับรวมกับอีกจุด' : r && !r.office ? '' : 'ไม่ทราบจำนวนบุคลากร');
 /** "อโศก (สุขุมวิท)" — next to the rail pictogram; "สถานีอโศก (สุขุมวิท)" in running text. */
@@ -115,7 +129,8 @@ export function provenance(ctx = {}, boundary = '', {rail = false, terrain = fal
 /** Bars per group in the group's series colour + shape cue; value = the measure. */
 function groupBars(byGroup, unit) {
   const val = g => (unit.id === 'count' ? g.count : g.staff);
-  const list = byGroup.filter(g => g.count > 0).sort((a, b) => val(b) - val(a) || b.count - a.count || a.index - b.index);
+  // Under personnel only the government-office groups are bars: it does not apply to places (never “unknown”).
+  const list = byGroup.filter(g => g.count > 0 && (unit.id === 'count' || g.office)).sort((a, b) => val(b) - val(a) || b.count - a.count || a.index - b.index);
   if (!list.length) return `<p class="hint">ไม่มี${esc(unit.subject)}</p>`;
   const max = Math.max(1, ...list.map(val));
   return `<ul class="mix-list" aria-label="หมวดหน่วยงาน (${esc(unit.one)})">${list.map(g => {
@@ -143,7 +158,7 @@ const moreButton = count => `<p class="list-more"><button type="button" class="l
 
 /** The chip figure of a type: the measure; personnel unknown → its offices (“2 แห่ง”), never “0”. */
 const chipFigure = (x, unit) => (unit.id === 'count' ? num(x.count) : x.staff ? num(x.staff) : `${num(x.count)} แห่ง`);
-const chipTitle = x => `${num(x.count)} แห่ง · ${x.staff ? `${num(x.staff)} คน` : 'ไม่ทราบจำนวนบุคลากร'}`;
+const chipTitle = x => `${num(x.count)} แห่ง${x.type?.group && !x.type.group.office ? '' : ` · ${x.staff ? `${num(x.staff)} คน` : 'ไม่ทราบจำนวนบุคลากร'}`}`;
 
 /** Types as chips (group cue + short name); each filters the map to that type. */
 function typeChips(list, unit) {
@@ -159,7 +174,7 @@ function areaRanking(list, classOf, unit, {title, note = '', limit = 10, showPro
   return `<section class="panel-section" aria-labelledby="${esc(id)}">
     <div class="section-heading">${heading('area', title, id)}<span class="hint">${esc(note)}</span></div>
     <ol class="rank-list">${top.map((a, i) => {
-      const other = unit.id !== 'count' ? `${num(a.count)} แห่ง` : unit.offices === false ? '' : staffOf(a.staff, a.count);
+      const other = unit.id !== 'count' ? `${num(a.count)} แห่ง` : staffNote(a, unit);
       const where = [showProvince ? provinceName(a.province) : '', `${num(a.value)} ${unit.one}`, other].filter(Boolean).join(' · ');
       return `<li><button type="button" class="rank-row" data-action="select-area" data-id="${esc(a.id)}" aria-label="อันดับ ${i + 1} ${esc(placeName(a))} ${showProvince ? esc(provinceName(a.province)) : ''} ${num(a.value)} ${esc(unit.one)} ${esc(other)}">
         <span class="rank-index data-number" aria-hidden="true">${i + 1}</span>
@@ -178,7 +193,7 @@ function stationRanking(list, unit, {title = 'สถานีที่มีห�
   return `<section class="panel-section"><div class="section-heading">${heading('rail', title)}<span class="hint" title="ระยะตรงจากสถานีที่เปิดแล้ว">${pic('distance', 'hint-pic')}≤ 500 ม.</span></div>
     <ol class="rank-list">${top.map((s, i) => `<li><button type="button" class="rank-row" data-action="select-station" data-id="${esc(s.station.id)}" aria-label="${esc(stationName(s.station))} ${num(s.value)} ${esc(unit.one)}">
       <span class="rank-index data-number" aria-hidden="true">${i + 1}</span>
-      <span class="rank-name">${esc(stationShort(s.station))}<small>${esc(unit.offices === false ? `${num(s.count)} แห่ง` : `${num(s.count)} แห่ง · ${staffOf(s.staff, s.count)}`)}</small></span>
+      <span class="rank-name">${esc(stationShort(s.station))}<small>${esc([`${num(s.count)} แห่ง`, staffNote(s, unit)].filter(Boolean).join(' · '))}</small></span>
       <span class="rank-track" aria-hidden="true"><span class="rank-fill rail-fill" style="width:${Math.max(3, Math.round((s.value / max) * 100))}%"></span></span>
       <span class="rank-value data-number" aria-hidden="true">${num(s.value)}</span></button></li>`).join('')}</ol></section>`;
 }
@@ -207,16 +222,18 @@ function eventsSection(events, {limit = 6, title = 'ย้ายและเป�
 }
 
 /**
- * The other places of the same production dataset (education, religion and heritage, community): chips that add a
- * group to the map (loaded on demand), and every group at once.
+ * Under a หมวด filter, the way back to the rest of the same production dataset: every group (the default scope), the
+ * government offices together, and the places of education, religion and heritage, community. The default scope
+ * already lists every group in its bars, so it shows nothing here.
  */
-function datasetSection(groups, group, unit) {
-  const others = groups.filter(g => !g.office);
-  if (!others.length) return '';
-  const total = groups.reduce((s, g) => s + g.rows, 0);
-  const chip = g => `<li><button type="button" class="brand-chip${group === g.id ? ' is-selected' : ''}" data-action="filter-group" data-value="${esc(g.id)}" aria-pressed="${group === g.id}" title="${esc(g.th)} ${num(g.rows)} แห่ง (โหลดเมื่อเลือก)">${cueMarkup(g.series, {className: 'chip-cue'})}<span>${esc(g.th)}</span><small class="data-number">${num(g.rows)}</small></button></li>`;
-  return `<section class="panel-section"><div class="section-heading">${heading('dataset', 'สถานที่อื่นในชุดข้อมูลเดียวกัน')}<span class="hint">ทั้งชุด ${num(total)} แห่ง</span></div>
-    <ul class="chip-list">${others.map(chip).join('')}<li><button type="button" class="brand-chip${group === 'all' ? ' is-selected' : ''}" data-action="filter-group" data-value="all" aria-pressed="${group === 'all'}">${pic('dataset', 'chip-pic')}<span>ทุกหมวด</span><small class="data-number">${num(total)}</small></button></li></ul>
+function datasetSection(groups, group) {
+  if (!group || group === 'all') return '';
+  const total = groups.reduce((s, g) => s + g.rows, 0), offices = groups.filter(g => g.office);
+  const officeRows = offices.reduce((s, g) => s + g.rows, 0);
+  const pressed = v => `${group === v ? ' is-selected' : ''}" aria-pressed="${group === v}`;
+  const chip = g => `<li><button type="button" class="brand-chip${pressed(g.id)}" data-action="filter-group" data-value="${esc(g.id)}" title="${esc(g.th)} ${num(g.rows)} แห่ง">${cueMarkup(g.series, {className: 'chip-cue'})}<span>${esc(g.th)}</span><small class="data-number">${num(g.rows)}</small></button></li>`;
+  return `<section class="panel-section"><div class="section-heading">${heading('dataset', 'หมวดอื่นในชุดข้อมูลเดียวกัน')}<span class="hint">ทั้งชุด ${num(total)} แห่ง</span></div>
+    <ul class="chip-list"><li><button type="button" class="brand-chip${pressed('')}" data-action="filter-group" data-value="">${pic('dataset', 'chip-pic')}<span>ทุกหมวด</span><small class="data-number">${num(total)}</small></button></li><li><button type="button" class="brand-chip${pressed('offices')}" data-action="filter-group" data-value="offices">${pic('office', 'chip-pic')}<span>หน่วยงานรัฐ</span><small class="data-number">${num(officeRows)}</small></button></li>${groups.filter(g => !g.office).map(chip).join('')}</ul>
     ${group === 'education' ? `<p class="fact-line">${pic('school', 'fact-icon')}โรงเรียนรายแห่ง นักเรียน และค่าเรียน · ${link(SCHOOL_SITE, 'CityMETER School')}</p>` : ''}</section>`;
 }
 
@@ -311,7 +328,7 @@ export function renderOverview({insight, summary, overview, focusMode = 'auto', 
   const narrowed = focusMode !== 'none' && count > 0 && summary.count !== overview.count;
   const metrics = `<section class="metrics" aria-label="${narrowed ? 'ตัวเลขของพื้นที่ที่โฟกัส' : 'ตัวเลขรวมของข้อมูลที่เลือก'}">
     ${metricTile(summary.count, `แห่ง${narrowed ? ' ในโฟกัส' : ''}`, 'office')}
-    ${unit.offices === false ? metricTile(summary.types, 'ประเภท', 'type') : staffTile(summary.staff, summary.count, `บุคลากร${narrowed ? ' ในโฟกัส' : ''}`)}
+    ${staffTileOf(summary, unit, `บุคลากร${narrowed ? ' ในโฟกัส' : ''}`) || metricTile(summary.types, 'ประเภท', 'type')}
     ${metricTile(summary.areas, narrowed ? w : 'เขต/อำเภอ', 'area')}
     ${metricTile(summary.provinces, 'จังหวัด', 'province')}
   </section>`;
@@ -330,7 +347,7 @@ export function renderOverview({insight, summary, overview, focusMode = 'auto', 
   const types = overview.types.length && !typeCard ? `<section class="panel-section"><div class="section-heading">${heading('type', `ประเภทที่มี${unit.subject}มากที่สุด`)}<span class="hint"><button type="button" class="link-button" data-action="open-charts" data-value="types">ดูทุกประเภท</button></span></div>${typeChips(overview.types, unit)}</section>` : '';
   const rail = stationRanking(stations, unit, {title: `สถานีที่มี${unit.subject}รอบ ๆ มากที่สุด`});
   const events = eventsSection(overview.events, {showProvince: !province});
-  return `${typeCard}${aha}${metrics}${provinceList}${ranking}${mix}${types}${events}${rail}${datasetSection(groups, group, unit)}${typeCard ? '' : actionBar({kind: 'overview', province: province ? provinceName(province) : ''})}${provenance(ctx, scopeText, {rail: Boolean(rail || insight.rail?.focus?.within), events: Boolean(events)})}`;
+  return `${typeCard}${aha}${metrics}${provinceList}${ranking}${mix}${types}${events}${rail}${datasetSection(groups, group)}${typeCard ? '' : actionBar({kind: 'overview', province: province ? provinceName(province) : ''})}${provenance(ctx, scopeText, {rail: Boolean(rail || insight.rail?.focus?.within), events: Boolean(events)})}`;
 }
 
 /* ---------- Empty selections (EVID-05) ---------- */
@@ -363,7 +380,7 @@ export function renderArea(p, classOf, ctx = {}) {
       <p class="eyebrow">${esc(w.area)} · <button type="button" class="link-button" data-action="select-province" data-id="${esc(a.province)}">${esc(prov)}</button></p>
       <h2>${esc(place)}</h2>${a.nameEn ? `<p class="subtle">${esc(a.nameEn)}</p>` : ''}
       ${rank}
-      <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${unit.offices === false ? '' : staffTile(p.staff, p.count)}${metricTile(share, `ของ${prov}`, 'province', shareDetail)}${metricTile(railShare, 'ใกล้รถไฟฟ้า', 'rail', p.rail?.base ? railDetail(p.rail, unit) : '')}</div>
+      <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${staffTileOf(p, unit)}${metricTile(share, `ของ${prov}`, 'province', shareDetail)}${metricTile(railShare, 'ใกล้รถไฟฟ้า', 'rail', p.rail?.base ? railDetail(p.rail, unit) : '')}</div>
       ${selectionNote(p, place, ctx)}
       ${actionBar({kind: 'area', area: {place, province: prov}})}
       <div class="detail-actions">${p.count ? '<button type="button" class="btn" data-action="open-table">ดูรายชื่อ</button><button type="button" class="btn quiet" data-action="open-charts">เปรียบเทียบพื้นที่</button>' : ''}${link(productionLink({province: a.province, area: a.id}), 'ดูใน CityMETER', 'btn quiet source-link')}</div>
@@ -376,7 +393,7 @@ export function renderArea(p, classOf, ctx = {}) {
     <section class="panel-section"><div class="section-heading">${heading('type', 'ประเภท')}<span class="hint">${esc(unit.one)}</span></div>${typeChips(p.types, unit)}</section>
     ${events}
     ${stationRanking(p.stations, unit, {title: `สถานีใกล้${unit.place || 'หน่วยงาน'}`})}
-    <section class="panel-section"><div class="section-heading">${heading('office', unit.place || 'หน่วยงาน')}<span class="hint">${unit.offices === false ? 'เรียงตามประเภท' : 'เรียงตามประเภทและบุคลากร'}</span></div>${officeList(p.rows.slice(0, listLimit))}
+    <section class="panel-section"><div class="section-heading">${heading('office', unit.place || 'หน่วยงาน')}<span class="hint">${unit.personnel === false ? 'เรียงตามประเภท' : 'เรียงตามประเภทและบุคลากร'}</span></div>${officeList(p.rows.slice(0, listLimit))}
       ${p.count > listLimit ? moreButton(p.count) : ''}</section>
     ${provenance(ctx, boundary, {rail: Boolean(p.rail?.base), events: Boolean(events)})}`;
 }
@@ -404,7 +421,7 @@ export function renderStation(p, ctx = {}) {
       <div class="identity">${pic('rail', 'identity-pic')}<div>
         <p class="eyebrow">สถานีรถไฟฟ้า${s.lines?.length ? ` · ${esc(s.lines.join(' · '))}` : ''}${building ? ` · ${pic('construction')}กำลังสร้าง` : ''}</p>
         <h2>สถานี${esc(s.name)}</h2>${s.nameEn ? `<p class="subtle">${esc(s.nameEn)}</p>` : ''}</div></div>
-      <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${unit.offices === false ? '' : staffTile(p.staff, p.count)}${metricTile(p.radius, 'ม. รอบสถานี', 'distance', `ระยะตรงจากจุดอ้างอิงของสถานี ${meters(p.radius)}`)}</div>
+      <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${staffTileOf(p, unit)}${metricTile(p.radius, 'ม. รอบสถานี', 'distance', `ระยะตรงจากจุดอ้างอิงของสถานี ${meters(p.radius)}`)}</div>
       ${actionBar({kind: 'station', station: s, point: {lat: s.lat, lon: s.lon, role: 'station'}})}
       <div class="detail-actions">${link(stationLink(s), 'ดูใน CityMETER Transit', 'btn quiet source-link')}</div>
     </section>
@@ -414,7 +431,7 @@ export function renderStation(p, ctx = {}) {
   if (!p.count) return `${head}<div class="empty-note" role="note"><strong>ไม่พบ${esc(unit.place || 'หน่วยงาน')}รอบสถานีนี้</strong></div>${services}${provenance(ctx, boundary, {rail: true})}`;
   return `${head}    <section class="panel-section"><div class="section-heading">${heading('segment', groupWord(unit))}<span class="hint">${esc(unit.one)}</span></div>${groupBars(p.byGroup, unit)}</section>
     ${services}
-    <section class="panel-section"><div class="section-heading">${heading('office', unit.place || 'หน่วยงาน')}<span class="hint">${unit.offices === false ? 'เรียงตามประเภท' : 'เรียงตามประเภทและบุคลากร'}</span></div>${officeList(p.rows.slice(0, listLimit), {showArea: true, index: ctx.index, distance: p.distance})}
+    <section class="panel-section"><div class="section-heading">${heading('office', unit.place || 'หน่วยงาน')}<span class="hint">${unit.personnel === false ? 'เรียงตามประเภท' : 'เรียงตามประเภทและบุคลากร'}</span></div>${officeList(p.rows.slice(0, listLimit), {showArea: true, index: ctx.index, distance: p.distance})}
       ${p.count > listLimit ? moreButton(p.count) : ''}</section>
     ${provenance(ctx, boundary, {rail: true})}`;
 }
@@ -437,7 +454,7 @@ export function renderBuilding(b, ctx = {}) {
       <button type="button" class="btn quiet back" data-action="back">กลับ</button>
       <p class="eyebrow">${pic('building')} ${b.area ? `<button type="button" class="link-button" data-action="select-area" data-id="${esc(b.area.id)}">${esc(area)}</button>` : 'อาคาร'}${height ? ` · ${height}` : ''}</p>
       <h2>${esc(ctx.unit?.place || 'หน่วยงาน')}ในอาคารนี้</h2>
-      <div class="metrics compact">${metricTile(b.count, 'แห่ง', 'office')}${ctx.unit?.offices === false ? '' : staffTile(b.staff, b.count)}</div>
+      <div class="metrics compact">${metricTile(b.count, 'แห่ง', 'office')}${staffTileOf(b, ctx.unit)}</div>
       ${actionBar({kind: 'building', rows: b.rows, area: b.area ? {place: area, province: provinceName(b.area.province)} : null,
         point: withPoint ? {lat: withPoint.latitude, lon: withPoint.longitude, role: 'point'} : null})}
     </section>
@@ -512,7 +529,6 @@ export function renderOffice(d, ctx = {}) {
           ${r.agency ? `<dt>หน่วยงาน</dt><dd>${esc(r.agency)}${r.ministry ? ` · ${esc(r.ministry)}` : ''}</dd>` : ''}
           <dt>พื้นที่</dt><dd>${esc(ADMIN_TH[r.admin] || '')}</dd>
           <dt>พิกัด</dt><dd>${point}</dd>
-          ${r.points > 1 ? `<dt>จุดใน production</dt><dd>${num(r.points)} จุด · ชื่อและประเภทเดียวกัน ห่างกันไม่เกิน 100 ม. นับเป็น 1 แห่ง</dd>` : ''}
           <dt>รหัส</dt><dd><span class="hint data-number">${esc(r.id)}</span></dd>
         </dl>
         <p class="links">${d.area ? link(productionLink({province: r.province, area: r.area}), 'ดูพื้นที่นี้ใน CityMETER') : ''}</p>

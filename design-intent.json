@@ -1,6 +1,6 @@
 {
- "artifact": "CityMETER Government Office — 3D-first, district-first map of government offices and the personnel production records across Thailand, with production's groups and types, the nearest public services round a site, recent moves and openings, rail context from the same registry, and the other places of the same production dataset on demand",
- "productVersion": "0.1.0",
+ "artifact": "CityMETER Government Office — 3D-first, district-first map of every point of the production Government Officer dataset across Thailand (440,005: government offices and the places of the same dataset), with production's groups and types, the personnel production records at the offices, the nearest public services round a site, recent moves and openings and rail context from the same registry",
+ "productVersion": "0.2.0",
  "updatedOn": "2026-11-06",
  "ldsVersion": "0.9.7",
  "release": "v0.9.7-owner.1",
@@ -27,12 +27,12 @@
   "notDistributed": "full LDS library, the Location Intelligence Profile, other analytical families",
   "context": "stations (CityMETER Transit) as quiet rings: card fill + text-secondary stroke, selected = map.selectedStroke with a dashed 500 m radius; size cue of pins by recorded personnel; foundation fill for ordinal bars (stations, types)"
  },
- "firstAha": "share of the leading province’s offices placed at district level that sit in up to three districts with the most offices (never cutting a tie, never every district holding offices), the share within 500 m of an operating rail station there against the rest of the province (rows with a point; both bases; hidden when nothing is near rail), and the district(s) with the most offices outside it; the same with recorded personnel under the staff measure; the subject follows the scope (หน่วยงานรัฐ · a group · a type · บุคลากรที่บันทึก); computed per selection; the map opens in the 3D city preset with those districts focused automatically and the rest quiet",
- "countingUnit": "measure switch: offices (แห่ง, default) or personnel recorded (คน; offices with unknown personnel counted apart, never 0; a local government counted once; an agency's whole workforce on its head office only); off for a scope without recorded personnel",
+ "firstAha": "share of the leading province’s points placed at district level that sit in up to three districts with the most of them (never cutting a tie, never every district holding them), the share within 500 m of an operating rail station there against the rest of the province (rows with a point; both bases; hidden when nothing is near rail), and the district(s) with the most outside it; the same with recorded personnel under the staff measure; the subject follows the scope (หน่วยงานและสถานที่ · หน่วยงานรัฐ · a group · a type · บุคลากรที่บันทึก); computed per selection; the map opens in the 3D city preset with those districts focused automatically and the rest quiet",
+ "countingUnit": "measure switch: points (แห่ง, default; the option names what is counted: หน่วยงานและสถานที่ · หน่วยงาน · สถานที่) or personnel recorded (คน; government offices with unknown personnel counted apart, never 0; personnel once per office and per local government; an agency's whole workforce on its head office only; places have none); off for a scope without recorded personnel",
  "focusAndQuiet": {
   "implementation": "app.js focus modes (auto/explicit/none) and row scopes; map-layers.js filled/quiet/province feature-state; pins.js cue symbols vs grey context dots; massing.js quiet city tier vs rounded focus tier, see-through front buildings in the building view (setScene eye); venue-xray.js draws the building being looked at over everything else; stations.js quiet station rings and the selected station radius; camera.js presets and the building view (fitBuilding, twoPointBearing); provinces.js frames below zoom 8 without a จังหวัด filter"
  },
- "geometryAndMetricContract": "one row per symbol (one office: a production point or its repeated points within 100 m), only rows with a point; membership = the production district of the point's overlay subdistrict (row.admin = overlay); totals only (offices or personnel recorded); outlines per province on demand; other groups' rows per group file on demand",
+ "geometryAndMetricContract": "one row per symbol (one production point), only rows with a point; membership = the production district of the point's overlay subdistrict (row.admin = overlay); totals only (points or personnel recorded); outlines per province on demand; every group file loaded before the first paint (every group is the default scope); scope-wide figures computed once per scope and measure",
  "accessibility": [
   "native form labels and disclosure",
   "visible focus on every control including pins, area labels and chart marks",

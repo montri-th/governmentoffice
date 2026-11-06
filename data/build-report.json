@@ -1,10 +1,10 @@
 {
  "builtOn": "2026-11-06",
- "rows": 430199,
+ "rows": 440005,
  "counts": {
   "points": 440005,
-  "rows": 430199,
-  "officeRows": 19721,
+  "rows": 440005,
+  "officeRows": 20568,
   "repeatPoints": 9806,
   "repeatPointsByGroup": {
    "admin": 640,
@@ -17,51 +17,54 @@
    "fire": 36,
    "unclassified": 4
   },
-  "staffSharedRows": 182,
-  "staffSharedPersonnel": 14548,
+  "staffSharedRows": 744,
+  "staffSharedRepeatRows": 562,
+  "staffSharedRepeatPersonnel": 47393,
+  "staffSharedOrgRows": 182,
+  "staffSharedOrgPersonnel": 14548,
   "groups": {
-   "admin": 9027,
-   "police": 6402,
-   "fire": 2234,
-   "justice": 460,
-   "military": 699,
-   "unclassified": 899,
-   "education": 74139,
-   "religion": 109289,
-   "community": 227050
+   "admin": 9667,
+   "police": 6548,
+   "fire": 2270,
+   "justice": 472,
+   "military": 708,
+   "unclassified": 903,
+   "education": 75835,
+   "religion": 111421,
+   "community": 232181
   },
   "staffRows": 10095,
   "staff": 535745,
   "agencyStaffRows": 177,
-  "rawOfficer": 9953796,
+  "rawOfficer": 10269084,
   "districts": 925,
   "provinces": 77,
   "events": 97,
   "eventsMatched": 18,
   "eventsWithPoint": 9,
-  "ministryRows": 207376,
-  "railWithin2km": 1691
+  "ministryRows": 212291,
+  "railWithin2km": 1723
  },
  "files": {
   "data/offices.json": {
-   "bytes": 3281587,
-   "sha256": "cf7ca2ae745ac40ea4ac3ee63d5be8554c08a1cf9dc26501c2068db82c4b6cac",
-   "rows": 19721
+   "bytes": 3389715,
+   "sha256": "71c9b832d69efcf4f666599f8fe8caa45e667a878fd3963002f68171feff5d61",
+   "rows": 20568
   },
   "data/groups/education.json": {
-   "bytes": 7643446,
-   "sha256": "47642e1471f7f5d9d1962b45cd343c6693c7c0721cbb0797bc8449b01744c5e3",
-   "rows": 74139
+   "bytes": 7793814,
+   "sha256": "a750131273c799adcfde8ce2600e787a40457dceb1635475f3ef5194cd4ec1bb",
+   "rows": 75835
   },
   "data/groups/religion.json": {
-   "bytes": 10367051,
-   "sha256": "a719f4d94e57c4a6bafb3b8487ab4d66fd8b48bbd6505c25728b0857bde5c612",
-   "rows": 109289
+   "bytes": 10541492,
+   "sha256": "0af2ffd7d4cf51ce8fd894f33dfc66df872aaabbdbe26070243753f386cecaca",
+   "rows": 111421
   },
   "data/groups/community.json": {
-   "bytes": 17861824,
-   "sha256": "df209696902fde15bb9df94f8e4e5daecbd0e0109c1496416d84eb9c7baa3c40",
-   "rows": 227050
+   "bytes": 18195223,
+   "sha256": "bc7b439ed5f134057dae6b0350d8e1a7bf60747b00d3aa5fe927366bd61784fc",
+   "rows": 232181
   }
  },
  "reconciliation": {

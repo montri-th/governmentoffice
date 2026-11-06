@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {load, loadAll, readJSON, frameFiles, sha256} from './helpers.js';
-import {hasPoint, filterRows, summarize, rowValue, unitWords, pinSizeOf, staffUnknown, groupsOfScope, typeIdOf, typeParam} from '../js/model.js';
+import {hasPoint, filterRows, summarize, rowValue, unitWords, pinSizeOf, staffUnknown, groupsOfScope, scopeValue, typeIdOf, typeParam} from '../js/model.js';
 import {distanceM} from '../js/profile-model.js';
 
 test('offices.json decodes to the government offices of 05_PRODUCTION_ROWS, nothing dropped, keys unique', () => {
@@ -31,7 +31,7 @@ test('production reconciliation: rows and Σ officer per district × category eq
   assert.equal(r.receipt.url, 'https://landometer.com/api/v2/citymeter-v3/government-agency/info/lv0');
 });
 
-test('every group file is the bytes the dataset names; all groups together are every production point', () => {
+test('every group file is the bytes the dataset names; all groups together are every production point, one row each', () => {
   const {raw, data, files} = loadAll();
   for (const g of data.groups) {
     if (g.office) { assert.equal(g.file, ''); continue; }
@@ -44,20 +44,36 @@ test('every group file is the bytes the dataset names; all groups together are e
   }
   assert.equal(data.dropped, 0);
   assert.equal(data.rows.length, raw.meta.rows);
+  assert.equal(raw.meta.rows, raw.meta.points, 'every production point is a row (release 0.2.0)');
   assert.equal(new Set(data.rows.map(r => r.id)).size, data.rows.length, 'keys unique across every group');
-  assert.equal(data.rows.reduce((s, r) => s + r.points, 0), raw.meta.points, 'every production point is in exactly one row');
   for (const g of data.groups) assert.equal(filterRows(data.rows, {group: g.id}).length, g.rows, g.id);
-  assert.equal(filterRows(data.rows, {group: 'all'}).length, data.rows.length);
-  assert.equal(filterRows(data.rows, {group: ''}).length, raw.meta.counts.officeRows, 'the default scope is the government offices');
-  assert.deepEqual(groupsOfScope(data.groups, '').map(g => g.id), ['admin', 'police', 'fire', 'justice', 'military', 'unclassified']);
+  assert.equal(filterRows(data.rows, {group: ''}).length, data.rows.length, 'the default scope is every group');
+  assert.equal(filterRows(data.rows, {group: 'all'}).length, data.rows.length, 'the 0.1.0 value of every group still reads as every group');
+  assert.equal(filterRows(data.rows, {group: 'offices'}).length, raw.meta.counts.officeRows, 'the government offices, one filter');
+  assert.deepEqual(groupsOfScope(data.groups, '').map(g => g.id), data.groups.map(g => g.id));
+  assert.deepEqual(groupsOfScope(data.groups, 'offices').map(g => g.id), ['admin', 'police', 'fire', 'justice', 'military', 'unclassified']);
+  assert.deepEqual([scopeValue('all', data.groups), scopeValue('', data.groups), scopeValue('offices', data.groups), scopeValue('religion', data.groups), scopeValue('nope', data.groups)],
+    ['', '', 'offices', 'religion', '']);
 });
 
-test('one office per production point, or per repeated points of one office (same type and name, same province, ≤ 100 m)', () => {
+test('one row per production point: repeated points of one office stay rows, their personnel is counted once', () => {
   const {raw, data} = loadAll();
-  const repeated = data.rows.filter(r => r.points > 1);
-  assert.equal(repeated.reduce((s, r) => s + r.points - 1, 0), raw.meta.counts.repeatPoints);
-  assert.equal(raw.meta.repeats.offices, raw.meta.rows);
+  assert.equal(raw.meta.repeats.rows, raw.meta.points);
   assert.match(raw.meta.repeats.rule, /same type and same name/);
+  assert.match(raw.meta.repeats.rule, /every point stays a row/);
+  assert.equal(raw.meta.repeats.repeatPoints, raw.meta.counts.repeatPoints);
+  assert.ok(data.rows.every(r => r.points === undefined), 'no row stands for several points');
+  // A repeated point names the point where its office's personnel is counted (same type, name and province).
+  const byId = new Map(data.rows.map(r => [r.id, r]));
+  const norm = v => String(v).normalize('NFC').replace(/[\u200B-\u200D\uFEFF\s]/g, '');
+  const repeats = data.rows.filter(r => r.staffShared && !raw.meta.staffOnce.types.includes(r.type.id));
+  assert.ok(repeats.length > 0);
+  for (const r of repeats) {
+    const at = byId.get(r.staffShared);
+    assert.ok(at.staff > 0 && at.type.id === r.type.id && at.province === r.province && norm(at.name) === norm(r.name), r.id);
+  }
+  assert.equal(data.rows.filter(r => r.staffShared).length, raw.meta.counts.staffSharedRows);
+  assert.equal(raw.meta.counts.staffSharedRows, raw.meta.counts.staffSharedRepeatRows + raw.meta.counts.staffSharedOrgRows);
 });
 
 test('measure contract: personnel only where the type records it at the site; unknown is never 0; local government counted once', () => {
@@ -76,10 +92,11 @@ test('measure contract: personnel only where the type records it at the site; un
   const byId = new Map(data.rows.map(r => [r.id, r]));
   for (const r of data.rows.filter(x => x.staffShared)) {
     const at = byId.get(r.staffShared);
-    assert.ok(at && at.staff > 0 && r.staff === null, `${r.id} → ${r.staffShared}`);
-    assert.ok(raw.meta.staffOnce.types.includes(r.type.id) && at.type.id === r.type.id && at.province === r.province);
+    assert.ok(at && at.staff > 0 && r.staff === null && !at.staffShared, `${r.id} → ${r.staffShared}: the point that counts it`);
+    assert.ok(at.type.id === r.type.id && at.province === r.province, `${r.id}: same type, same province`);
     assert.equal(staffUnknown(r), false, 'counted at the other office, not unknown');
   }
+  assert.equal(staffUnknown({office: false, staff: null, staffShared: ''}), false, 'a place: personnel does not apply, never “unknown”');
   // Head offices: the agency's whole workforce, kept apart (never added to a district).
   assert.ok(data.rows.filter(r => r.agencyStaff).every(r => rule(r.type.id) === 'agency' && r.staff === null));
   assert.equal(data.rows.filter(r => r.agencyStaff).length, raw.meta.counts.agencyStaffRows);

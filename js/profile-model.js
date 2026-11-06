@@ -51,6 +51,8 @@ export function unplacedOf(rows) {
 }
 
 const sum = (rows, metric) => rows.reduce((s, r) => s + rowValue(r, metric), 0);
+/** Government offices among rows (personnel applies to them only). */
+const officesIn = rows => rows.reduce((n, r) => n + (r.office ? 1 : 0), 0);
 
 /** Recent moves and openings (06_RECENT_PROD_GAPS) of a province or district, newest first. */
 export function eventsOf(events = [], {province = '', area = ''} = {}) {
@@ -59,7 +61,7 @@ export function eventsOf(events = [], {province = '', area = ''} = {}) {
 
 export function buildOverview(scopeRows, index, {province = '', groups = [], metric = DEFAULT_METRIC, events = []} = {}) {
   return {ranking: rankAreas(scopeRows, index, {province, metric}), types: typesIn(scopeRows, 12, metric), unplaced: unplacedOf(scopeRows),
-    mix: mixOf(scopeRows, groups), count: scopeRows.length, staff: sum(scopeRows, 'staff'),
+    mix: mixOf(scopeRows, groups), count: scopeRows.length, offices: officesIn(scopeRows), staff: sum(scopeRows, 'staff'),
     staffUnknown: scopeRows.filter(staffUnknown).length, rail: railShare(scopeRows, metric),
     events: eventsOf(events, {province})};
 }
@@ -78,8 +80,8 @@ export function stationsOf(rows, metric = DEFAULT_METRIC, m = 500, limit = 6) {
   const by = new Map();
   for (const r of rows) {
     if (!r.rail || r.rail.m > m) continue;
-    const s = r.rail.station, e = by.get(s.id) || {station: s, count: 0, staff: 0, value: 0};
-    e.count++; e.staff += r.staff || 0; e.value += rowValue(r, metric); by.set(s.id, e);
+    const s = r.rail.station, e = by.get(s.id) || {station: s, count: 0, offices: 0, staff: 0, value: 0};
+    e.count++; e.offices += r.office ? 1 : 0; e.staff += r.staff || 0; e.value += rowValue(r, metric); by.set(s.id, e);
   }
   return [...by.values()].sort((a, b) => b.value - a.value || COLLATOR.compare(a.station.name, b.station.name)).slice(0, limit);
 }
@@ -95,7 +97,7 @@ export function buildAreaProfile(scopeRows, areaId, index, groups, {metric = DEF
   const posProvince = inProvince.findIndex(a => a.id === areaId);
   const value = sum(mine, metric), provinceValue = sum(provinceRows, metric);
   return {
-    area, words: levelWords(area.province), metric, value, count: mine.length, staff: sum(mine, 'staff'), staffUnknown: mine.filter(staffUnknown).length,
+    area, words: levelWords(area.province), metric, value, count: mine.length, offices: officesIn(mine), staff: sum(mine, 'staff'), staffUnknown: mine.filter(staffUnknown).length,
     km2: area.km2, coverageState: selectionState(mine.length), scopeCount: scopeRows.length,
     rank: pos >= 0 && value > 0 ? pos + 1 : null, rankOf: ranking.filter(a => a.value > 0).length,
     rankProvince: posProvince >= 0 && value > 0 ? posProvince + 1 : null, rankProvinceOf: inProvince.filter(a => a.value > 0).length,
@@ -112,7 +114,7 @@ export function buildTypeProfile(typeId, {allRows, scopeRows, index, data, group
   if (!type) return null;
   const all = allRows.filter(r => r.type?.id === typeId);
   const inScope = scopeRows.filter(r => r.type?.id === typeId);
-  return {type, all: all.length, allStaff: sum(all, 'staff'), scopeCount: inScope.length, scopeStaff: sum(inScope, 'staff'),
+  return {type, all: all.length, allStaff: sum(all, 'staff'), scopeCount: inScope.length, offices: officesIn(inScope), scopeStaff: sum(inScope, 'staff'),
     staffUnknown: inScope.filter(staffUnknown).length, ...mixOf(inScope, groups), areas: rankAreas(inScope, index, {metric}),
     provinces: new Set(inScope.map(r => r.province).filter(Boolean)).size, points: inScope.filter(hasPoint).length,
     placed: inScope.filter(r => r.area).length, rail: railShare(inScope, metric), rows: [...inScope].sort(listOrder)};
@@ -127,7 +129,7 @@ export function buildBuildingProfile(sel, index, groups) {
   const rows = [...sel.rows].sort(listOrder);
   const area = index.byId.get(rows[0].area) || null;
   const areaIds = [...new Set(rows.map(r => r.area))];
-  return {key: sel.key, kind: sel.kind || 'osm', rows, count: rows.length, staff: sum(rows, 'staff'), staffUnknown: rows.filter(staffUnknown).length,
+  return {key: sel.key, kind: sel.kind || 'osm', rows, count: rows.length, offices: officesIn(rows), staff: sum(rows, 'staff'), staffUnknown: rows.filter(staffUnknown).length,
     area, areaCount: areaIds.length, words: levelWords(rows[0].province), height: Number.isFinite(sel.height) ? sel.height : null,
     types: typesIn(rows, 6), ...mixOf(rows, groups)};
 }
@@ -236,7 +238,7 @@ export function buildStationProfile(station, {scopeRows, allRows = scopeRows, gr
   }
   rows.sort((a, b) => listOrder(a.row, b.row));
   const list = rows.map(x => x.row);
-  return {station, radius, metric, count: list.length, staff: sum(list, 'staff'), staffUnknown: list.filter(staffUnknown).length,
+  return {station, radius, metric, count: list.length, offices: officesIn(list), staff: sum(list, 'staff'), staffUnknown: list.filter(staffUnknown).length,
     value: sum(list, metric), ...mixOf(list, groups), types: typesIn(list, 8, metric), rows: list,
     services: nearestServicesOf({lat: station.lat, lon: station.lon}, allRows, {province}),
     distance: new Map(rows.map(x => [x.row.id, x.m]))};

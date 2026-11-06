@@ -15,15 +15,17 @@ Public inputs:
   --index    data/area-index.json (district gazetteer)
   --transit  a checkout of montri-th/transit (data/transit.json: rail stations of CityMETER · Transit)
 
-Outputs: data/offices.json (the office groups + every dictionary + provenance), data/groups/<group>.json (the other
-groups' rows, loaded by the page on demand), data/build-report.json (counts and checks).
+Outputs: data/offices.json (the government-office groups + every dictionary + provenance), data/groups/<group>.json
+(the rows of the other groups; the page loads every file at start), data/build-report.json (counts and checks).
 
-ONE ROW = one office: a point of 05_PRODUCTION_ROWS (one UUID of the CityMETER production Government Officer dataset,
-government_agency, as production's overlay returns it: 440,005 points in 77 provinces), or the repeated points of one
-office — same type, same name (spaces and zero-width characters ignored), same province, chained within REPEAT_M
-metres — kept as the point with the smallest UUID, `points` saying how many production points it stands for. Nothing
-is moved, split or re-labelled; the key is the first 10 hex digits of the UUID (unique across the dataset, checked).
-Every production point is in exactly one row (Σ points = 440,005, checked).
+ONE ROW = one production point: a point of 05_PRODUCTION_ROWS (one UUID of the CityMETER production Government Officer
+dataset, government_agency, as production's overlay returns it: 440,005 points in 77 provinces). Release 0.2.0 (owner
+2026-11-06, “อยากได้ทั้งสี่แสนจุด”): every point is its own row, as production counts them — nothing is merged, moved,
+split or re-labelled; the key is the first 10 hex digits of the UUID (unique across the dataset, checked).
+
+REPEATED POINTS OF ONE OFFICE (same type, same name — spaces and zero-width characters ignored — same province, chained
+within REPEAT_M metres) stay separate rows; only their personnel is counted once: at the point with the smallest UUID
+that records it, the other points naming that point (staffShared).
 
 RECONCILIATION (the build stops on any failure): the rows per district and category, and the recorded personnel per
 district and category, equal production's government-agency info lv0 read today, district by district.
@@ -32,9 +34,10 @@ DISTRICT = the production district of the point's overlay subdistrict (05.overla
 subdistrict → its district code): production's own spatial membership, never re-assigned.
 
 GROUPS (presentation of production's 13 categories and the points without one): admin (ปกครอง), police (ตำรวจ), fire
-(ดับเพลิง), justice (ยุติธรรม), military (ทหาร) and unclassified (no category yet) are the office groups — the page's
-default scope; education (มหาวิทยาลัย · โรงเรียน · แหล่งความรู้), religion (ศาสนา · โบราณสถาน) and community (ชุมชน ·
-ความปลอดภัยชุมชน · สมาคม / มูลนิธิ) are the other places of the same dataset, published in their own files.
+(ดับเพลิง), justice (ยุติธรรม), military (ทหาร) and unclassified (no category yet) are the government-office groups
+(personnel applies); education (มหาวิทยาลัย · โรงเรียน · แหล่งความรู้), religion (ศาสนา · โบราณสถาน) and community
+(ชุมชน · ความปลอดภัยชุมชน · สมาคม / มูลนิธิ) are the other places of the same dataset, published in their own files.
+The page's default scope is every group (every production point).
 TYPES = production's gov_sub_office_id with production's own labels.
 
 PERSONNEL (production's `officer`, “บุคลากร” on production): a row's personnel is known only when its type records a
@@ -420,8 +423,9 @@ def main():
             type_rule[code] = staff_rule(type_values[code])
     # ---------- repeated points of one office (build time, never at runtime) ----------
     # Points of the same type and the same name (spaces and zero-width characters ignored) in the same province,
-    # chained within REPEAT_M of each other, are one office: its row is the point with the smallest UUID and it says
-    # how many production points it stands for. Different places that share a generic name stay apart (distance).
+    # chained within REPEAT_M of each other, are one office. Every one of them stays a row (production counts them
+    # all); the office's personnel is counted once (below). Different places that share a generic name stay apart
+    # (distance).
     by_name = collections.defaultdict(list)
     for i, rec in enumerate(recs):
         by_name[(rec['type'], th_norm(rec['name']), rec['province'])].append(i)
@@ -447,19 +451,14 @@ def main():
         for i in idx:
             comps[find(i)].append(i)
         for members in comps.values():
-            head = min(members, key=lambda i: recs[i]['uuid'])
+            if len(members) < 2:
+                continue
+            members.sort(key=lambda i: recs[i]['uuid'])
             for i in members:
-                rep_of[i] = head
-    repeat_points = collections.Counter()
-    for i, rec in enumerate(recs):
-        head = recs[rep_of[i]]
-        head['points'] = head.get('points', 0) + 1
-        if rep_of[i] != i:
-            repeat_points[rec['group']] += 1
-            head.setdefault('memberUuids', []).append(rec['uuid'])
+                rep_of[i] = members[0]
+    repeat_points = collections.Counter(rec['group'] for i, rec in enumerate(recs) if rep_of[i] != i)
     points_total = len(recs)
-    rep_by_uuid = {rec['uuid']: recs[rep_of[i]] for i, rec in enumerate(recs)}
-    recs = [rec for i, rec in enumerate(recs) if rep_of[i] == i]
+    by_uuid = {rec['uuid']: rec for rec in recs}
 
     for rec in recs:
         rule = type_rule[rec['type']]
@@ -468,6 +467,29 @@ def main():
         p = agency_parent.get(th_norm(rec['agency'])) or (agency_parent.get(th_norm(rec['name'])) if rec['group'] == 'unclassified' else None)
         rec['ministry'] = p[0] if p and p[0] and th_norm(p[0]) != th_norm(rec['agency']) else ''
 
+    # Personnel once per office: the repeated points of one office record its personnel once — at the point with the
+    # smallest UUID that records any (its own value); the other points of the office name that point (staffShared).
+    office_points = collections.defaultdict(list)
+    for i, rec in enumerate(recs):
+        office_points[rep_of[i]].append(rec)
+    for members in office_points.values():
+        members.sort(key=lambda r: r['uuid'])
+    repeat_shared_rows = repeat_shared_staff = 0
+    for members in office_points.values():
+        if len(members) < 2:
+            continue
+        counted = next((r for r in members if r['staff']), None)   # members are in UUID order
+        if not counted:
+            continue
+        for r in members:
+            if r is counted:
+                continue
+            if r['staff']:
+                repeat_shared_staff += r['staff']
+            repeat_shared_rows += 1
+            r['staffShared'] = counted['key']
+            r['staff'] = None
+
     # Personnel once per organisation: a local government's personnel is the organisation's (gov_name), repeated on
     # every office of that organisation in the province; it is counted at the office with the smallest key, and the
     # others point to it (staffShared).
@@ -475,16 +497,29 @@ def main():
     for rec in recs:
         if rec['type'] in ORG_STAFF_TYPES and rec['staff']:
             org[(rec['type'], th_norm(rec['agency']), rec['province'], rec['staff'])].append(rec)
-    shared_rows = shared_staff = 0
+    org_shared_rows = org_shared_staff = 0
     for members in org.values():
         if len(members) < 2:
             continue
         members.sort(key=lambda r: r['key'])
         for r in members[1:]:
-            shared_rows += 1
-            shared_staff += r['staff']
+            org_shared_rows += 1
+            org_shared_staff += r['staff']
             r['staffShared'] = members[0]['key']
             r['staff'] = None
+    # One hop: a point that names a point whose personnel moved on to its organisation's office names that office.
+    by_key_all = {rec['key']: rec for rec in recs}
+    for rec in recs:
+        k, hops = rec.get('staffShared'), 0
+        while k and by_key_all[k].get('staffShared'):
+            k, hops = by_key_all[k]['staffShared'], hops + 1
+            if hops > 4:
+                sys.exit(f"staffShared chain does not end at {rec['key']}")
+        if k:
+            rec['staffShared'] = k
+            if not by_key_all[k]['staff']:
+                sys.exit(f"staffShared of {rec['key']} names {k}, which records no personnel")
+    shared_rows = sum(1 for rec in recs if rec.get('staffShared'))
 
     # ---------- rail ----------
     for rec in recs:
@@ -530,7 +565,7 @@ def main():
         dname = th_norm(re.sub(r'^(อำเภอ|เขต|อ\.)\s*', '', col('อำเภอ / เขต')))
         dcode = district_by_name.get((prov, dname)) or ''
         uuid = col('UUID แถวเดิมใน prod')
-        rec = rep_by_uuid.get(uuid) if uuid else None
+        rec = by_uuid.get(uuid) if uuid else None
         if uuid and not rec:
             sys.exit(f'06: production row {uuid} is not in 05')
         lat, lon = col('ละติจูด'), col('ลองจิจูด')
@@ -579,7 +614,7 @@ def main():
                 lst.append(v)
             return idx[v]
         cols = {k: [] for k in ('key', 'name', 'type', 'agency', 'staff', 'lat', 'lon', 'district')}
-        agency_staff, ev_map, rail, rail2, row_ministry, points, shared = {}, {}, {}, {}, {}, {}, {}
+        agency_staff, ev_map, rail, rail2, row_ministry, shared = {}, {}, {}, {}, {}, {}
         for i, rec in enumerate(part):
             pre = prefixes.get(rec['type'], '')
             name = rec['name']
@@ -604,8 +639,6 @@ def main():
                 rail2[str(i)] = list(rec['rail2'])
             if rec['agencyStaff']:
                 agency_staff[str(i)] = rec['agencyStaff']
-            if rec.get('points', 1) > 1:
-                points[str(i)] = rec['points']
             if rec.get('staffShared'):
                 shared[str(i)] = rec['staffShared']
             if rec.get('events'):
@@ -614,7 +647,7 @@ def main():
             cols['staff'] = {'const': -1}
         doc = {'agencies': agencies, 'agencyMinistry': agency_ministry, 'ministries': ministries, 'cols': cols,
                'rowMinistry': row_ministry, 'rail': rail, 'rail2': rail2, 'agencyStaff': agency_staff, 'rowEvents': ev_map,
-               'points': points, 'staffShared': shared}
+               'staffShared': shared}
         # round trip of the names and the ministries
         for i, rec in enumerate(part):
             n = cols['name'][i]
@@ -646,7 +679,7 @@ def main():
     # ---------- dictionaries and provenance ----------
     def gstats(part):
         st = [r['staff'] for r in part if r['staff']]
-        return {'rows': len(part), 'points': sum(r.get('points', 1) for r in part), 'staffRows': len(st), 'staff': sum(st),
+        return {'rows': len(part), 'staffRows': len(st), 'staff': sum(st),
                 'staffShared': sum(1 for r in part if r.get('staffShared')), 'agencyStaffRows': sum(1 for r in part if r['agencyStaff'])}
     by_group = collections.defaultdict(list)
     for rec in recs:
@@ -666,10 +699,13 @@ def main():
     stations_out = [{'id': s['id'], 'name': s['name'], 'nameEn': s['nameEn'], 'lat': s['lat'], 'lon': s['lon'], 'status': s['status'], 'lines': s['lines']} for s in stations]
 
     staff_types = {t['id']: t['staff'] for t in types_out}
+    if len(recs) != points_total:
+        sys.exit('every production point must be a row')
     counts = {
         'points': points_total, 'rows': len(recs), 'officeRows': len(office_part),
         'repeatPoints': sum(repeat_points.values()), 'repeatPointsByGroup': dict(repeat_points),
-        'staffSharedRows': shared_rows, 'staffSharedPersonnel': shared_staff,
+        'staffSharedRows': shared_rows, 'staffSharedRepeatRows': repeat_shared_rows, 'staffSharedRepeatPersonnel': repeat_shared_staff,
+        'staffSharedOrgRows': org_shared_rows, 'staffSharedOrgPersonnel': org_shared_staff,
         'groups': {g['id']: g['rows'] for g in groups_out},
         'staffRows': sum(1 for r in recs if r['staff']), 'staff': sum(r['staff'] for r in recs if r['staff']),
         'agencyStaffRows': sum(1 for r in recs if r['agencyStaff']),
@@ -687,7 +723,7 @@ def main():
         'readOn': a.read_on, 'readMethod': "the sheet's own HTML view, cell by cell, in the owner's signed-in browser (scripts/export-sheet-tabs.js)",
         'tabs': tab_shas, 'checkedOn': '2026-11-06', 'builtOn': datetime.date.today().isoformat(),
         'rows': len(recs), 'points': points_total, 'counts': counts,
-        'unit': {'row': 'one office: a point of the production Government Officer dataset, or the repeated points of one office (same type and name, same province, chained within %d m) — the point with the smallest UUID' % REPEAT_M,
+        'unit': {'row': 'one point of the production Government Officer dataset (every production point is a row, as production counts them)',
                  'count': 'แห่ง — points of the selection', 'staff': 'คน — personnel production records at the office (types with a site count only)'},
         'staffRules': {'constant': '≥ 90% of the type\'s positive values are one value: a default, not a count',
                        'scale': 'the type\'s 90th percentile is below 10: not a staff count for that kind of office',
@@ -698,10 +734,11 @@ def main():
                            'cells': len(theirs), 'mismatches': 0, 'countryRows': country['statistics']['totalGovernmentAgencies'],
                            'countryPersonnel': country['modeValues']['population'], 'rule': 'rows and Σ officer per production district × category equal government-agency info lv0'},
         'adminMethods': {'overlay': "the district of the point's production overlay subdistrict"},
-        'repeats': {'rule': 'same type and same name (spaces and zero-width characters ignored), same province, chained within %d m: one office, the point with the smallest UUID' % REPEAT_M,
-                    'points': points_total, 'offices': len(recs), 'repeatPoints': sum(repeat_points.values())},
+        'repeats': {'rule': 'same type and same name (spaces and zero-width characters ignored), same province, chained within %d m: points of one office — every point stays a row; the office\'s personnel is counted once, at the point with the smallest UUID that records it' % REPEAT_M,
+                    'points': points_total, 'rows': len(recs), 'repeatPoints': sum(repeat_points.values()),
+                    'staffSharedRows': repeat_shared_rows, 'staffSharedPersonnel': repeat_shared_staff},
         'staffOnce': {'types': sorted(ORG_STAFF_TYPES), 'rule': "local government personnel is the organisation's (gov_name): counted once per organisation and province, at its office with the smallest key",
-                      'rows': shared_rows, 'personnel': shared_staff},
+                      'rows': org_shared_rows, 'personnel': org_shared_staff},
         'gazetteer': {'source': 'CityMETER production base info', 'receipts': len(receipts), 'receiptsSha256': receipts_sha},
         'context': {
             'rail': {'source': 'CityMETER · Transit (montri-th/transit)', 'commit': repo_commit(a.transit), 'file': 'data/transit.json',

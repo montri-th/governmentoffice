@@ -17,12 +17,12 @@ export function buildChartModel(rows, index, groups, {limit = 20, metric = DEFAU
 
 /**
  * District × group matrix of the measure (equal cells; zero is a measured 0 in this selection). Only the groups the
- * selection can hold are columns (the loaded groups of the scope).
+ * selection holds are columns — under personnel, the government-office groups only (it does not apply to places).
  */
 export function areaMatrix(model, {areaLimit = 12} = {}) {
   const areas = model.areas.slice(0, areaLimit);
   const present = new Set(model.rowsGroups || []);
-  const groups = model.groups.filter(g => present.has(g.index));
+  const groups = model.groups.filter(g => present.has(g.index) && (model.metric !== 'staff' || g.office));
   const cells = areas.flatMap(a => {
     const values = new Map(), counts = new Map(), unknown = new Map();
     for (const r of a.rows) {
