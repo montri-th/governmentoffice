@@ -61,7 +61,22 @@ light and dark:
 
 ## 5. Live
 
-Recorded after publication.
+GitHub Pages (main / root), enabled on 2026-11-06 (ICT) for the release commit `a90f10f`:
+
+- `npm run verify:live` (2026-11-06T05:43:49Z): **246 ok, 0 failed** — every published file of the manifest at
+  `a90f10f` byte-identical (SHA-256) on https://montri-th.github.io/governmentoffice/ (`evidence/live-attestation.json`,
+  not committed); the root document serves the `index.html` bytes.
+- Walk in the owner's Chrome with the real basemap, terrain and building tiles (window 1280 × 643; the desktop and phone
+  views also in same-origin frames of the live site at 1440 × 900 and 390 × 844, as in the Hotel and School walks):
+  the first screen in dark (Aha, legend, the three focused districts of Nakhon Ratchasima over OpenFreeMap);
+  `?office=280dc7ddb7` (เทศบาลนครหาดใหญ่): the map turned 3D and framed the drawn CityMETER Building V4 building nearest
+  the pin in two-point perspective (legend “อาคารใกล้หมุด”, attribution “อาคาร: CityMETER Building V4”), terrain chips
+  read from the DEM (16 ม. · ต่างระดับ 12 ม.), the five nearest services; desktop light — `?station=RAILCAT:MRT_PINK:PK12`
+  with the 3D city, the dashed 500 m radius, office names near the middle and the services panel; phone light —
+  `?area=3001` with the sheet open; desktop dark — `?type=1070&province=BKK` (the type card, “15% ของสถานีตำรวจใน
+  กรุงเทพมหานคร”, the rail bars); phone dark — the first screen with the dock; `?group=religion&metric=staff` ready in
+  4.6 s with the personnel switch off and the URL back to `?group=religion`. Launch state `ready`, map loaded, no map
+  failure, no console error.
 
 ## 6. Not verified
 
