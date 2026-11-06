@@ -92,7 +92,25 @@ Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the 
 
 ## 6. Live
 
-0.3.0: recorded after publication (the commit after the release).
+0.3.0 — release commits `c2314e4` (0.3.0), `be7c329` and `2529478` (Street View from the street people come in from;
+cache tag `20261106-r6`):
+
+- `npm run verify:live` (2026-11-06, commit `2529478`): **249 ok, 0 failed** — every published file byte-identical
+  (SHA-256) on https://montri-th.github.io/governmentoffice/ (`evidence/live-attestation.json`, not committed).
+- The court in the owner's Chrome (window 1400 × 779, real OpenFreeMap tiles, CityMETER Building V4): `?office=b86ab4e816`
+  turns to the court — “อาคารตามชื่อบนแผนที่”, OpenStreetMap's “ศาลเยาวชนและครอบครัวจังหวัดอุบลราชธานี” 69 m from the point,
+  the building 44.7 m from it — framed with the point; desktop light and dark; the phone in a 390 × 844 frame of the live
+  site, light and dark, the sheet open on the office. Street View opens on the gate street, 9 m from the point, heading
+  155°: Google's panorama (June 2024) shows the coffee shop on the right and the court's white building behind the gate.
+  The first published version stood Street View on the court's drive, the next on the alley behind it (`be7c329`,
+  `2529478` fixed both). The owner's saved theme was put back after the frames.
+- Twelve more offices opened live: the six 0.2.0 picks OpenStreetMap names elsewhere (two police stations, two ministries'
+  offices, เทศบาลนครหาดใหญ่, กรมส่งเสริมวัฒนธรรม) and two อบต. turn to their named buildings (27–99 m); a police
+  station keeps the building holding its point (the audit, without the streets, had preferred a larger neighbour); offices without a
+  name take a building of their type's size (28–77 m), labelled “อาคารใกล้หมุด”; a department carrying its
+  municipality's name (สำนักงานงานความสะอาด เทศบาลนครเชียงใหม่) stays at its own point. A building panel (11 offices in one
+  building) opens Street View facing the building. First screen as in 0.2.0; no console error.
+
 
 0.2.0 —
 
