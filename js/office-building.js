@@ -313,8 +313,9 @@ export function bearingDeg([lon1, lat1], [lon2, lat2]) {
  * Street View in front of a building, turned to face it.
  * rings: the building's outer rings ([[lon, lat]…], pieces as drawn); height: its height (m); pin: the office's point;
  * roads: [{cls, brunnel?, coords: [[lon, lat]…]}].
- * The viewpoint is the point of a street nearest the building's centre (the building's own frontage), the street
- * nearer the pin first when two are equally near (a pin is often dropped at the gate); without a street within
+ * The viewpoint is the point of a public street nearest the building's centre (the building's own frontage; a service
+ * road — a compound's drive or car park — a motorway or a bridge only when none is near), the street nearer the pin
+ * first when two are equally near (a pin is often dropped at the gate); without a street within
  * FRONTAGE_REACH_M, the pin itself when it stands outside the building. heading = bearing viewpoint → centre; pitch
  * lifts the view for a tall building close by.
  * → {lat, lon, heading, pitch, from: 'road'|'pin'} | null (nothing to face it from).
@@ -330,11 +331,12 @@ export function streetViewOf(rings, height, pin, roads = []) {
   const tx = target[0] * kx, ty = target[1] * ky;
   const hasPin = Array.isArray(pin) && Number.isFinite(pin[0]) && Number.isFinite(pin[1]);
   const pinInside = hasPin && usable.some(r => pointInRing(pin, r));
-  // Ground-level streets first; a motorway or a bridge (an elevated view, often no panorama) only when none is near.
+  // Public streets at ground level first; a service road (a compound's drive or car park, rarely a panorama), a
+  // motorway or a bridge (an elevated view) only when none is near.
   let best = null;
   for (const road of roads || []) {
     if (!STREET_CLASSES.has(road?.cls) || road.brunnel === 'tunnel' || !Array.isArray(road.coords)) continue;
-    const penalty = road.cls === 'motorway' || road.brunnel === 'bridge' ? 1000 : 0;
+    const penalty = road.cls === 'service' || road.cls === 'motorway' || road.brunnel === 'bridge' ? 1000 : 0;
     const c = road.coords;
     for (let i = 0; i < c.length - 1; i++) {
       const ax = c[i][0] * kx, ay = c[i][1] * ky, bx = c[i + 1][0] * kx, by = c[i + 1][1] * ky;

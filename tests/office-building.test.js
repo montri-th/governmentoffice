@@ -162,6 +162,11 @@ test('Street View stands on the street in front of the building and faces it', (
   assert.equal(onlyPath.from, 'pin');
   const motorway = {cls: 'motorway', coords: [at(-80, -5), at(80, -5)]};
   assert.equal(streetViewOf([block.outer], 20, at(0, 0), [motorway, side]).heading, bearingDeg(at(60, -40), at(0, -40)), 'the side street, facing west');
+  // A compound's service road beside the building (no panorama there) loses to the street in front.
+  const drive = {cls: 'service', coords: [at(-30, -20), at(30, -20)]};
+  const fromStreet = streetViewOf([block.outer], 20, at(0, 0), [front, drive]);
+  assert.ok(Math.abs(fromStreet.lat - at(0, 8)[1]) < 3 * my, 'the street, not the drive');
+  assert.equal(streetViewOf([block.outer], 20, at(0, 0), [drive]).from, 'road', 'the drive when it is all there is');
   // No street: from the pin when it stands outside the building; nothing when it is inside.
   const fromPin = streetViewOf([block.outer], 20, at(0, 0), []);
   assert.equal(fromPin.from, 'pin');

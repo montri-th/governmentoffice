@@ -37,7 +37,7 @@ Two measurements, both on the government offices (20,568 rows):
 |---|---|---|---|---|
 | 1 | The point falls in another building | a shop, kiosk, guardhouse or neighbour at the street front holds the point; 0.2.0 trusted it | 42 % of the judged points fall in a building; 0.2.0 was right for 80 % of them; 202 offices of the V4 audit change building | name; the type's footprint floor and the size of its buildings; the setback from the street |
 | 2 | The point stands in the open; the nearest building is not the office | the point is on the drive, the lawn, the car park or the road; the nearest is a guardhouse, a canteen or the building across the street | 58 % of the judged points (67 % of the V4 audit) fall in no building; 0.2.0 was right for 59 % of them; 2,489 offices of the V4 audit change building (819 of them police boxes, now the nearest structure) | name; the side of the street; size and setback for the types with a floor |
-| 3 | The point is far from the office | more than 150 m from the building OpenStreetMap names | 199 of the 1,547 named offices (13 %) | the office's own name, carried by no other office, finds its building within 800 m; otherwise a data fix |
+| 3 | The point is far from the office | more than 150 m from the building OpenStreetMap names | 199 of the 1,547 named offices (13 %): 100 by the office's own name, 99 where one name holds the other (often a department of the named organisation, which may be elsewhere) or is similar | the office's own name, carried by no other office, finds its building within 800 m; otherwise a data fix |
 | 4 | Nothing is drawn near the point | no building within 150 m: camps, bases and checkpoints in forest, rural sites, a stray point | 657 offices of the V4 audit (5 %) | the camera still looks 800 m round (0.2.0); a data fix |
 | 5 | No building of the type's size near the point | buildings within 150 m, none of half the type's floor | 186 offices of the V4 audit | a data fix (point or building data) |
 | 6 | Street View | opened at the point with Google's default heading | every office | the street in front of the chosen building, facing it (§5) |
@@ -104,9 +104,10 @@ on the map decided it) or “อาคารใกล้หมุด”. A build
 
 ## 5. Street View
 
-`streetViewOf` (owner: “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the viewpoint is the point of a street
-(motorway … service, never a path, a track or a tunnel; ground level before a motorway or a bridge) nearest the centre
-of the building being looked at, within 120 m, the street nearer the office's point first when two are as near (a
+`streetViewOf` (owner: “streetview ถ้าเลือกแล้วต้องให้หันหน้าเข้าหาอาคารด้วยนะ”): the viewpoint is the point of a public
+street (trunk … minor at ground level; a service road — a compound's drive or car park, rarely a panorama — a motorway
+or a bridge only when none is near; never a path, a track or a tunnel) nearest the centre of the building being looked
+at, within 120 m, the street nearer the office's point first when two are as near (a
 point is often dropped at the gate); `heading` turns the panorama from there to the building's centre and `pitch`
 lifts it for a tall building close by (`map_action=pano&viewpoint=…&heading=…&pitch=…`). Without a street, the
 office's point when it stands outside the building; before the building is known, the point with Google's own
@@ -119,8 +120,9 @@ building or carries a flag (3,909; spreadsheets stay out of this repository): `k
 nothing_within_150m · openstreetmap_buildings for an office outside the CityMETER units), `cause`
 (pin_in_other_building · nearest_not_it · nothing_within_150m · no_building_of_type_size), `openstreetmap`
 (named_elsewhere_<m>: 0.2.0's building was not the one OpenStreetMap names, which stands <m> from the point — 358
-offices; pin_far_<m>: the point is <m> from the named place — 199 offices), and the area and distance of the 0.2.0
-and 0.3.0 buildings (V4, without names and streets) with `v030_why` (pin · near · size).
+offices; pin_far_<m>: the point is <m> from the named place — 199 offices), `openstreetmap_name` (same: the office's
+name · contains: one name holds the other, often a department of the named organisation · similar), and the area and
+distance of the 0.2.0 and 0.3.0 buildings (V4, without names and streets) with `v030_why` (pin · near · size).
 
 ```sh
 node scripts/audit-building-choice.mjs --tiles <cache dir> --out <dir> --fetch   # V4 tiles round each office, both rules, causes
@@ -128,7 +130,9 @@ node scripts/audit-building-choice.mjs --tiles <cache dir> --out <dir> --fetch  
 
 ## 7. For the research team
 
-- `pin_far_<m>` (199): the production point stands far from the office OpenStreetMap names — check and move the point.
+- `pin_far_<m>` (199): the production point stands far from the place OpenStreetMap names — check and move the point;
+  first the 100 with `openstreetmap_name` = same (the 99 others may be a department of the named organisation that
+  really sits elsewhere).
 - `nothing_within_150m` (657) and `no_building_of_type_size` (186): the point is off, or the building is missing from
   the building data.
 - `named_elsewhere_<m>` (358): the page now turns to the named building; the point itself can be moved onto it.
