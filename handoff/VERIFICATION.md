@@ -123,8 +123,16 @@ Playwright with MapLibre 5.6.2 from the npm package; OpenFreeMap, unpkg and the 
 
 ## 6. Live
 
-0.4.0 — release commits `58e7675` (0.4.0) and `4c5af8f` (a large site framed as its buildings arrive; cache tag
-`20261106-r8`):
+0.4.0 — release commits `58e7675` (0.4.0), `4c5af8f` (a large site framed as its buildings arrive) and `397313b`
+(Google Maps opens the office, not the municipality; cache tag `20261106-r9`):
+
+- Google Maps from an office (owner 2026-11-06: เทศบาลนครเชียงใหม่ opened the municipality's boundary): the live panel's
+  link for `?office=befec620ab` now searches “สำนักงานเทศบาลนครเชียงใหม่ อำเภอเมืองเชียงใหม่ เชียงใหม่” and Google Maps opens
+  Chiang Mai City Municipal Office, 30 m from the point; `?office=4339815240` (ราชาเทวะ) → Racha Thewa Subdistrict
+  Administrative Organization, 20 m; `?office=9e3a8ef3c0` (บางเสาธง) → the district office's place, at the point;
+  `?office=a8e41bf4f7` (a fire unit named by its municipality) → a list of the fire stations and the municipality office
+  of Phra Pradaeng. Measured before the change: เทศบาลนครเชียงใหม่, อำเภอเมืองสมุทรปราการ and เมืองพัทยา open the municipality,
+  the district and the city as boundaries; a viewport at the point does not change that.
 
 - `npm run verify:live` (2026-11-06, commit `4c5af8f`): **251 ok, 0 failed** — every published file byte-identical
   (SHA-256) on https://montri-th.github.io/governmentoffice/ (`evidence/live-attestation.json`, not committed).
