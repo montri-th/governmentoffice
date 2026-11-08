@@ -49,7 +49,9 @@
  * below PROVINCE_FILL_MAX_ZOOM a เขต/อำเภอ of the selected จังหวัด, else a province → เขต/อำเภอ (`area-hit`, every
  * zoom from AREA_MIN_ZOOM). Quiet context dots are never targets.
  * Panel modes: overview (+ type card with a ประเภท filter) | area | station | building | office (with a back stack).
- * URL state: filters, metric, area, areas, view, office, station, view3d.
+ * URL state (own names, inside): filters, metric, area, areas, view, office, station, view3d — written in the shared
+ * grammar d · at · e · m · f.* · focus · view · v3d by citymeter-shell (js/shell/url.js), with a browser history
+ * entry per level (the back button goes up a level).
  */
 import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, decodeSites, attachSites, appendGroupRows, rankRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, scopeValue, SCOPE_ALL, SCOPE_OFFICES} from './model.js';
 import {buildAreaIndex, areaWord, areaLocator, recordBounds} from './areas.js';
@@ -76,6 +78,8 @@ import {rampLegendHTML} from './scales.js';
 import {cueMarkup} from './cues.js';
 import {installOfficeLabels} from './labels.js';
 import {installTerrain, terrainFacts, terrainChips, TERRAIN} from './terrain.js';
+import {createCodec, createNavigator} from './shell/url.js';
+import {pageTitle} from './shell/title.js';
 
 const $ = id => document.getElementById(id);
 const FIELDS = ['search', 'group', 'type', 'province'];
@@ -106,6 +110,17 @@ const state = {
   // Building camera: the x-ray solid, what was framed last ({id, key, refits}) and whether the user moved the map since.
   xray: null, framed: null, userCamera: false,
 };
+
+/* ---------- address (citymeter-shell, js/shell/url.js) ---------- */
+// The page keeps its own parameter names inside (saveURL / restoreFromURL); the shell writes them in the shared
+// grammar d · at · e · m · f.* · focus · view · v3d, and opening an area or an item adds one browser history entry,
+// so the back button goes up a level. Old links (?area=, ?office= …) still open and are rewritten.
+// The `e` kinds are provisional until the dataset registry declares them.
+const nav = createNavigator(createCodec({
+  dataset: 'governmentOfficer', levels: ['P', 'D'], place: {province: 'province', D: 'area'},
+  items: {office: 'office', station: 'station'}, filters: FIELDS,
+  provinceOf: code => state.index?.byId.get(code)?.province || '',
+}), {onPop: restoreFromHistory});
 
 /* ---------- helpers ---------- */
 const values = () => ({search: $('search').value, group: state.group, type: $('type').value, province: $('province').value});
@@ -160,7 +175,8 @@ function saveURL() {
   if (state.panel.mode === 'office' && state.panel.id) p.set('office', state.panel.id);
   if (state.panel.mode === 'station' && state.panel.id) p.set('station', state.panel.id);
   if (!state.view3d) p.set('view3d', '0');
-  history.replaceState(null, '', location.pathname + (p.size ? '?' + p : ''));
+  // A building view has no address of its own: the address stays on what it was opened from.
+  if (state.panel.mode !== 'building') nav.commit(p);
 }
 
 /* ---------- theme ---------- */
@@ -337,9 +353,11 @@ function renderCrumbs() {
     crumbs = buildBreadcrumb({province: $('province').value, area: state.selectedArea ? areaById(state.selectedArea) : null});
   }
   $('crumbs').innerHTML = renderBreadcrumb(crumbs);
+  // Tab title: what the view shows, then the product, ≤ 60 characters (LDS FAVICON-01, js/shell/title.js).
   const st = mode === 'station' ? stationById(id) : null;
-  const title = mode === 'office' ? `${rowById(id)?.name || ''} · ` : mode === 'building' ? 'อาคาร · ' : st ? `สถานี${st.name} · ` : '';
-  document.title = `${title}${breadcrumbText(crumbs)} · Government Office · CityMETER`;
+  const place = crumbs[crumbs.length - 1].label;
+  document.title = pageTitle(mode === 'office' ? rowById(id)?.name || place
+    : mode === 'building' ? `อาคาร ${place}` : st ? `สถานี${st.name}` : `${unit().subject} ${place}`);
   return crumbs;
 }
 
@@ -463,6 +481,8 @@ function pushHistory() {
 }
 
 function goBack() {
+  // Every level change is a browser history entry (citymeter-shell): go up the way the browser's button does.
+  if (state.panel.mode !== 'building' && nav.canGoBack()) { nav.back(); return; }
   const previous = state.history.pop();
   if (!previous) { state.selectedArea = ''; state.panel = overviewPanel(); update({fit: true}); return; }
   // Leaving or reaching a building or station view always moves the camera.
@@ -1986,7 +2006,7 @@ function refreshCategoryKey() {
  * the office (?office=) is resolved once they are in (resolveDeepLinks). `group=all` (0.1.0) is every group.
  */
 function restoreFromURL() {
-  const p = new URLSearchParams(location.search);
+  const p = nav.read();
   let group = scopeValue(p.get('group'), state.data.groups);
   // A type outside the group scope widens it to every group (an old link may carry the type alone).
   const type = p.has('type') ? typeById(typeIdOf(p.get('type'))) : null;
@@ -2008,10 +2028,21 @@ function restoreFromURL() {
 }
 /** After the URL's group is loaded: its type, and the office it names. */
 function resolveDeepLinks({type = ''} = {}) {
-  const p = new URLSearchParams(location.search);
+  const p = nav.read();
   if (type && [...$('type').options].some(o => o.value === type)) $('type').value = type;
   const office = p.get('office') && rowById(p.get('office'));
   if (office) state.panel = {mode: 'office', id: office.id};
+}
+
+/** Browser back / forward (citymeter-shell): show the level the restored address names. */
+function restoreFromHistory() {
+  for (const f of ['search', 'type', 'province']) $(f).value = '';
+  Object.assign(state, {view: 'areas', metric: 'count', selectedArea: '', focusAreaIds: [], autoFocus: true, panel: overviewPanel(), history: [], buildingSel: null});
+  const fromURL = restoreFromURL();
+  commitGroup(fromURL.group);
+  resolveDeepLinks(fromURL);
+  $('toggle-3d').setAttribute('aria-pressed', String(state.view3d));
+  update({fit: true});
 }
 
 function wireEvents() {
