@@ -11,7 +11,7 @@
  * than 150 m from the named building, and the 0.2.0 rule picked the named building for 63 % of the offices whose
  * named building stands within 150 m of the pin.
  *
- * chooseBuilding scores every drawn building within the reach of the pin (pieces grouped as js/building-join.js groups
+ * chooseBuilding scores every drawn building within the reach of the pin (pieces grouped as js/shell/building-join.js groups
  * them; footprints as js/massing.js keeps them) and keeps the best — a conditional-logit fit on those offices
  * (docs/BUILDING_CHOICE.md §3):
  *   - name: an OpenStreetMap point of interest of the office's kind within POI_REACH_M of the pin, named as the office
@@ -27,7 +27,7 @@
  *     (up to 60 m; the shops and kiosks of a compound line the street).
  * It stays a camera choice — named “อาคารที่หมุดตก” only when the pin falls in it, else “อาคารใกล้หมุด” — never a
  * join, a count or a located-in claim (the building panel still lists the pins inside its outline,
- * js/building-join.js#joinRows).
+ * js/shell/building-join.js#joinRows).
  *
  * streetViewOf puts Street View on the street in front of that building and turns it to face the building (Google
  * Maps URLs: map_action=pano, viewpoint, heading, pitch).
@@ -35,7 +35,7 @@
  * Pure: no map, no DOM. js/app.js passes the drawn footprints, POIs and streets (js/massing.js); the audit
  * (scripts/audit-building-choice.mjs) runs the same code over CityMETER Building V4 tiles.
  */
-import {pointInRing} from './geometry.js';
+import {pointInRing} from './shell/geometry.js';
 
 /**
  * Footprint floor (m²) of the main building of a government-office type: a building below it loses
@@ -223,7 +223,7 @@ function partingStreets(roads, [lon, lat], kx, ky, reachM) {
 
 /**
  * The building the camera turns to for an office. office: {longitude, latitude, typeId (production type code), name};
- * pieces/keyOfPiece as js/building-join.js#joinBuildings; pois: [{lon, lat, name, cls, sub}] and roads: [{cls, coords}]
+ * pieces/keyOfPiece as js/shell/building-join.js#joinBuildings; pois: [{lon, lat, name, cls, sub}] and roads: [{cls, coords}]
  * of the same basemap tiles (js/massing.js#streetsAndNames); maxM: the reach (js/app.js: 300 m, 800 m once when
  * nothing is drawn within it).
  * → {key, pieceId, distanceM, inside (the pin falls in it), why: 'name'|'pin'|'size'|'near', areaM2, poi} | null.

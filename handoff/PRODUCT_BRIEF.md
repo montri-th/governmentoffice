@@ -46,7 +46,7 @@ Snapshot (fixture): ทุกจุด — นครราชสีมา เม
 
 ## 8. แผนที่และกล้อง
 
-สืบทอดจาก CityMETER · Hotel 0.3.6 โดยไม่เปลี่ยนสัญญา: basemap สร้างใน `js/map-style.js` บน OpenFreeMap · มวลอาคาร quiet/focus · อาคาร CityMETER Building V4 ราย อปท./เขต · กล้อง city/model/eye · มุมมองอาคาร 2-point perspective ซูมพอดี
+สืบทอดจาก CityMETER · Hotel 0.3.6 โดยไม่เปลี่ยนสัญญา: basemap สร้างใน `js/shell/map-style.js` บน OpenFreeMap · มวลอาคาร quiet/focus · อาคาร CityMETER Building V4 ราย อปท./เขต · กล้อง city/model/eye · มุมมองอาคาร 2-point perspective ซูมพอดี
 
 **สัญลักษณ์:** หนึ่งสัญลักษณ์ต่อหนึ่งแถวที่มีจุด สีและรูปทรงตามหมวด พื้นที่ตามบุคลากรที่บันทึก (√(บุคลากร/100) เพดาน 1,000) วงโปร่ง = หน่วยงานที่ไม่ทราบ · สถานที่ทึบขนาดคงที่ · คำอธิบาย 50 · 250 · 1,000 คน (เมื่อขอบเขตมีหน่วยงานรัฐ) · นอกโฟกัสทุกจุดของขอบเขตเป็นจุดสีเทาเงียบ (MultiPoint ต่อรูปแบบ ส่งหลังภาพแรก, `js/pins.js#contextCollection`)
 

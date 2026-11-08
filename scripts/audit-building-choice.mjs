@@ -2,12 +2,12 @@
 /**
  * Audit of the building the camera turns to for each government office (owner 2026-11-06: “อยากให้พี่หาเคสที่
  * spatial join ผิดให้เจอว่ามีรายการไหนบ้าง มีสาเหตุกี่แบบ”), over the buildings the page draws inside a CityMETER unit:
- * CityMETER Building V4 tiles of the production tile API (the URLs js/building-units.js#cmTileUrl requests), read at
+ * CityMETER Building V4 tiles of the production tile API (the URLs js/shell/building-units.js#cmTileUrl requests), read at
  * z16 round each office (± REACH_M) instead of z14 — the same buildings, a sixteenth of the work for the API.
  *
  * For every office whose ± REACH_M square meets a CityMETER unit it runs the page's code on the same footprints
- * (js/massing.js#shapeCmTile → js/building-join.js#joinBuildings):
- *   - 0.2.0: the building holding the pin (the smallest piece), else the nearest (js/building-join.js#nearestBuilding);
+ * (js/massing.js#shapeCmTile → js/shell/building-join.js#joinBuildings):
+ *   - 0.2.0: the building holding the pin (the smallest piece), else the nearest (js/shell/building-join.js#nearestBuilding);
  *   - 0.3.0: js/office-building.js#chooseBuilding (distance, pin, the type's smallest footprint; OpenStreetMap names
  *     are not in these tiles — the page adds them from the basemap).
  * and writes one JSON line per office (old and new building: area, distance, inside) with the cause of a change
@@ -21,12 +21,12 @@
  */
 import {readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync} from 'node:fs';
 import {gunzipSync, gzipSync} from 'node:zlib';
-import {parseVectorTile, tilesForBBox} from '../js/mvt.js';
+import {parseVectorTile, tilesForBBox} from '../js/shell/mvt.js';
 import {shapeCmTile} from '../js/massing.js';
-import {joinBuildings, nearestBuilding} from '../js/building-join.js';
-import {zonesOf, cmTileUrl} from '../js/building-units.js';
+import {joinBuildings, nearestBuilding} from '../js/shell/building-join.js';
+import {zonesOf, cmTileUrl} from '../js/shell/building-units.js';
 import {chooseBuilding, buildingsNear, TYPE_FOOTPRINT_M2} from '../js/office-building.js';
-import {ringsIntersect, pointInRing} from '../js/geometry.js';
+import {ringsIntersect, pointInRing} from '../js/shell/geometry.js';
 
 const REACH_M = 150, Z = 16;
 const arg = name => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };

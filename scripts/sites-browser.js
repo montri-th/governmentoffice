@@ -49,7 +49,7 @@
     try {
       const code = window.__SITES_IN?.code || base;
       const M = await import(`${code}scripts/site-buildings.mjs`);
-      const BU = await import(`${code}js/building-units.js`), MS = await import(`${code}js/map-style.js`);
+      const BU = await import(`${code}js/shell/building-units.js`), MS = await import(`${code}js/shell/map-style.js`);
       const off = await (await fetch(`${base}data/offices.json`)).json();
       const pre = Object.fromEntries(off.types.map(t => [t.id, t.prefix || '']));
       const rowsOf = new Map();

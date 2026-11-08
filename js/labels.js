@@ -10,11 +10,11 @@
  * / phone). Each label is measured and placed above its point, else below it; it never covers the map chrome, another
  * label or the open popup. During a camera move the placed labels follow their points every frame (no re-ranking);
  * the set is ranked again when the move ends. Labels are buttons (Tab, Enter opens the office); on a fine pointer,
- * hover or focus opens a card of icon chips — group, type, personnel, agency and the terrain facts of js/terrain.js.
+ * hover or focus opens a card of icon chips — group, type, personnel, agency and the terrain facts of js/shell/terrain.js.
  * Full sentences live in the accessible names and chip titles only; the provenance line stays in the panel. No logos.
  */
 import {cueMarkup} from './cues.js';
-import {terrainFacts, terrainChips} from './terrain.js';
+import {terrainFacts, terrainChips} from './shell/terrain.js';
 
 export const LABEL_MIN_ZOOM = 12.5;
 export const LABEL_MAX = Object.freeze({desktop: 9, phone: 5});
@@ -225,7 +225,7 @@ export function installOfficeLabels(map, container, {onSelect, bounds, avoid = (
     placeCard();
     const facts = await terrainFacts(map, row).catch(() => null);
     if (cardRow !== row) return;
-    const t = terrainChips(facts, {num}).map(c => chip(c.kind, c.text, c.title)).join('');
+    const t = terrainChips(facts, {num, subject: 'หน่วยงาน'}).map(c => chip(c.kind, c.text, c.title)).join('');
     card.querySelector('.hc-terrain').innerHTML = t;
     placeCard();
   }
