@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.5.1",
+ "productVersion": "0.6.0",
  "updatedOn": "2026-11-06",
  "documentType": "implementation-plan",
  "architecture": {
@@ -35,7 +35,7 @@
    "js/frames.js",
    "js/shell/geometry.js",
    "js/labels.js",
-   "js/launch.js",
+   "js/shell/launch.js",
    "js/map-layers.js",
    "js/shell/map-style.js",
    "js/shell/maplibre-guard.js",
