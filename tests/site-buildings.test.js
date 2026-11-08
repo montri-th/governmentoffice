@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {tileToLonLat} from '../js/mvt.js';
-import {footprint, containsPoint} from '../js/building-join.js';
+import {tileToLonLat} from '../js/shell/mvt.js';
+import {footprint, containsPoint} from '../js/shell/building-join.js';
 import {siteCandidates, deepPoint, localFrame, joinFrame, inFrame, pointsText, squareRing, MAX_SITE_M} from '../scripts/site-buildings.mjs';
 import {encodeTile, square} from './mvt-encode.js';
 

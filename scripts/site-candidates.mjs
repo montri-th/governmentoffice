@@ -2,8 +2,8 @@
 // Research helper for office sites (docs/SITES.md; skills campus-site-join and osm-area-site-join, owner 2026-11-06:
 // “ใช้วิธีนี้ และเพิ่มวิธีตาม skill ใหม่เพิ่มเติม”, “ให้สร้างตัวช่วยฝั่งอาคาร OSM … OK”). Ported from montri-th/hotel
 // scripts/site-candidates.mjs (commit 177e592). Run from the root of a clone of this repo (Node 20+, no packages). It reads
-// the buildings with the same code the demo map uses (scripts/site-buildings.mjs over js/massing.js, js/mvt.js,
-// js/building-units.js, js/building-join.js), so a point it writes stands inside a building the map draws. It writes
+// the buildings with the same code the demo map uses (scripts/site-buildings.mjs over js/massing.js, js/shell/mvt.js,
+// js/shell/building-units.js, js/shell/building-join.js), so a point it writes stands inside a building the map draws. It writes
 // nothing in data/ — the research sheet stays the record; outputs go to sites/ (git-ignored).
 // A site is a display grouping of the buildings of one office's compound, never a deed, a parcel or ownership.
 //
@@ -18,9 +18,9 @@
 import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {deflateSync} from 'node:zlib';
-import {zonesOf} from '../js/building-units.js';
-import {footprint, containsPoint} from '../js/building-join.js';
-import {TILEJSON_URL} from '../js/map-style.js';
+import {zonesOf} from '../js/shell/building-units.js';
+import {footprint, containsPoint} from '../js/shell/building-join.js';
+import {TILEJSON_URL} from '../js/shell/map-style.js';
 import {siteCandidates, localFrame} from './site-buildings.mjs';
 
 const [cmd, venue] = process.argv.slice(2);

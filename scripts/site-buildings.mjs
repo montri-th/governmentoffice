@@ -2,12 +2,12 @@
 // scripts/site-candidates.mjs (Node) and scripts/sites-browser.js (the owner's browser on this repository's page, where
 // OpenFreeMap tiles are reached). Buildings are read with the code the page draws them with: CityMETER Building V4
 // inside a CityMETER unit (js/massing.js#shapeCmTile, whole buildings), OpenStreetMap elsewhere (OpenFreeMap tiles,
-// js/massing.js#shapeTile, the pieces of one building grouped as the page groups them, js/building-join.js#groupPieces).
-// Every building comes with one point well inside it, so the page finds it again with js/building-join.js#buildingsAtPoints.
+// js/massing.js#shapeTile, the pieces of one building grouped as the page groups them, js/shell/building-join.js#groupPieces).
+// Every building comes with one point well inside it, so the page finds it again with js/shell/building-join.js#buildingsAtPoints.
 import {tilesForRegions, planCmRequests, shapeCmTile, shapeTile, roundingRadiusM, encloseOffsetM} from '../js/massing.js';
-import {parseVectorTile} from '../js/mvt.js';
-import {zoneAt, cmTileUrl} from '../js/building-units.js';
-import {footprint, containsPoint, interiorOf, groupPieces} from '../js/building-join.js';
+import {parseVectorTile} from '../js/shell/mvt.js';
+import {zoneAt, cmTileUrl} from '../js/shell/building-units.js';
+import {footprint, containsPoint, interiorOf, groupPieces} from '../js/shell/building-join.js';
 
 export const MAX_SITE_M = 600; // a site building farther from the office's point is not one site (Hotel SITE_MAX_M)
 export const SITE_ZOOM = 14;   // the page's focus tier (js/massing.js TILE_ZOOM)
@@ -66,7 +66,7 @@ export function squareRing(lon, lat, m) {
 
 /**
  * The buildings the page draws within `reach` m (a square) of an office's point.
- * zones: CityMETER units (js/building-units.js#zonesOf); fetchBytes(url, key) → Uint8Array (an empty array for a 204);
+ * zones: CityMETER units (js/shell/building-units.js#zonesOf); fetchBytes(url, key) → Uint8Array (an empty array for a 204);
  * osmTemplate: the OpenFreeMap tile URL template ({z}/{x}/{y}) for OpenStreetMap buildings; source: 'auto' (the
  * page's choice at the point), 'cm' or 'osm'.
  * → {source, reach, requests, candidates: [{cid, point, area_m2, height_m, dist_m, pieces, outer, holes}]} nearest first.

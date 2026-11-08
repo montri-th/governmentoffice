@@ -1,9 +1,10 @@
 /**
- * Terrain context where the land shapes a site (the Hotel rule of 2026-11-01, point 2: “… การอยู่ติดทะเล อยู่บนเนินเขา
- * ที่สูง หุบเขา ในป่า … แค่พอดูออกว่าภูมิประเทศที่ตั้งอยู่เป็นอย่างไร”) — for an office: on a hill, in a valley, by the sea.
+ * Terrain context where the land shapes a site (Hotel, owner 2026-11-01, point 2: “โรงแรมประเภทรีสอร์ท จะ
+ * sensitive กับวิวสวยไม่สวย การอยู่ติดทะเล อยู่บนเนินเขา ที่สูง หุบเขา ในป่า … แค่พอดูออกว่าภูมิประเทศที่ตั้งอยู่เป็นอย่างไร”).
+ * Every demo on the shell reads its own items the same way: on a hill, in a valley, by the sea.
  *
- * Terrain mode switches on by itself at site scale only where the land has relief: 3D view on, not a building or a
- * office being looked at (the two-point camera frames flat ground: the panel carries the terrain facts), zoom ≥ TERRAIN.minZoom
+ * Terrain mode switches on by itself at site scale only where the land has relief: 3D view on, not a building or an
+ * item being looked at (the two-point camera frames flat ground: the panel carries the terrain facts), zoom ≥ TERRAIN.minZoom
  * and the visible ground spans at least TERRAIN.reliefOn metres (p95 − p5 of a DEM sample of the view; off again
  * below TERRAIN.reliefOff or below TERRAIN.offZoom). Flat cities (Bangkok) never load terrain. In terrain mode:
  *  - the ground is 3D (MapLibre terrain, heights exaggerated × TERRAIN.exaggeration — the legend says so);
@@ -11,12 +12,14 @@
  *  - the เขต/อำเภอ choropleth switches off from TERRAIN.minZoom (a hard switch, never a fade: data colours keep
  *    their opacity, LDS) so the relief is readable; outlines, pins, labels and buildings carry the reading.
  *
- * Terrain facts of an office (hover card, office panel) are read on demand from the same DEM tiles and from the OSM
+ * Terrain facts of an item (hover card and panel, where the demo shows them) are read on demand from the same DEM tiles and from the OSM
  * water and land-cover polygons the basemap has loaded: ground elevation, relief within 500 m, position against the
  * ring around it, the nearest ring (straight line) that reaches the sea, and tree cover within 300 m. They describe
  * the ground, never a view, a price or a risk.
  *
  * DEM: Terrain Tiles on AWS (Mapzen/Tilezen terrarium; SRTM 30 m over Thailand), fetched by the browser.
+ *
+ * Part of the shared CityMETER demo shell: edit it in every repository at once (js/shell/manifest.json).
  */
 import {SOURCE_ID} from './map-style.js';
 
@@ -115,16 +118,17 @@ export function factsFrom({at, ring500 = [], ring250 = []}, {seaBand = null, tre
 
 /**
  * Short icon chips for a card or the panel (owner 2026-11-01: icons instead of long text). Each chip:
- * {kind: pictogram role, text, title}. Unknown facts are left out, never shown as 0.
+ * {kind: pictogram role, text, title}. Unknown facts are left out, never shown as 0. `subject` names what the point
+ * is in the sea tooltip (“จุดของที่พักอยู่บนพื้นน้ำทะเลในแผนที่”); without it the tooltip says “จุดอยู่บน…”.
  */
-export function terrainChips(f, {num = v => String(v)} = {}) {
+export function terrainChips(f, {num = v => String(v), subject = ''} = {}) {
   if (!f) return [];
   const chips = [{kind: 'elevation', text: `${num(f.elevation)} ม.`, title: `พื้นดินสูงจากระดับทะเลราว ${num(f.elevation)} ม.`}];
   if (f.relief >= 5) chips.push({kind: 'relief', text: `ต่างระดับ ${num(f.relief)} ม.`, title: `ความสูงพื้นดินต่างกัน ${num(f.relief)} ม. ในรัศมี ${num(RELIEF_RADIUS_M)} ม.`});
   if (f.position !== 'level') chips.push({kind: 'relief', text: f.position === 'higher' ? `สูงกว่ารอบข้าง ${num(f.above)} ม.` : `ต่ำกว่ารอบข้าง ${num(-f.above)} ม.`,
     title: `เทียบกับค่าเฉลี่ยของวงรัศมี ${num(RELIEF_RADIUS_M)} ม.`});
-  if (f.seaBand !== null) chips.push({kind: 'sea', text: f.seaBand === 0 ? 'จุดอยู่บนทะเล' : `ทะเล ≤ ${num(f.seaBand)} ม.`, title: f.seaBand === 0 ? 'จุดของหน่วยงานอยู่บนพื้นน้ำทะเลในแผนที่' : `มีทะเลภายใน ${num(f.seaBand)} ม. (ระยะตรง)`});
-  // Tree cover is positive evidence only: OSM land cover missing around an office is not 0 % trees.
+  if (f.seaBand !== null) chips.push({kind: 'sea', text: f.seaBand === 0 ? 'จุดอยู่บนทะเล' : `ทะเล ≤ ${num(f.seaBand)} ม.`, title: f.seaBand === 0 ? `จุด${subject ? `ของ${subject}` : ''}อยู่บนพื้นน้ำทะเลในแผนที่` : `มีทะเลภายใน ${num(f.seaBand)} ม. (ระยะตรง)`});
+  // Tree cover is positive evidence only: OSM land cover missing around a point is not 0 % trees.
   if (f.treeShare > 0) chips.push({kind: 'forest', text: `ต้นไม้ ${Math.round(f.treeShare * 100)}%`, title: `สัดส่วนพื้นที่ป่าและต้นไม้ในรัศมี ${num(TREE_RADIUS_M)} ม. ตามแผนที่ OSM`});
   return chips;
 }
@@ -132,8 +136,8 @@ export function terrainChips(f, {num = v => String(v)} = {}) {
 const factCache = new Map();
 /**
  * Terrain facts of a row with a point (cached per row). The sea and tree cover come from the basemap tiles loaded
- * for the current view, so they are read only while the office is on screen and the basemap has loaded there
- * (`isSourceLoaded`); before that — an office chosen far from the camera, read before the flight lands — they stay
+ * for the current view, so they are read only while the item is on screen and the basemap has loaded there
+ * (`isSourceLoaded`); before that — an item chosen far from the camera, read before the flight lands — they stay
  * unknown (`partial`) and are not cached, so the panel reads them again once the camera is there.
  */
 export async function terrainFacts(map, row) {
@@ -199,7 +203,7 @@ export function siteRelief(lon, lat, {halfM = 1000} = {}) {
 
 /**
  * Mount terrain mode on a map (after style.load). options.colors: {shadow, highlight, accent}; options.onChange(active);
- * options.onLoaded() once the DEM under the view has loaded; options.site() → [lon, lat] of a building or office being
+ * options.onLoaded() once the DEM under the view has loaded; options.site() → [lon, lat] of a building or item being
  * looked at, or null: then the relief round that point decides (siteRelief, ±1 km; owner 2026-11-01: “อยากให้เห็น
  * อาคารบนภูมิประเทศ”) — the building camera's view is too close, and its pitched bounds too far, to read the land.
  * Returns {setEnabled(on3d), evaluate(), active(), retheme(colors), dispose()}.
@@ -251,7 +255,7 @@ export function installTerrain(map, {beforeId = 'water', colors = {}, onChange =
     const my = ++token, zoom = map.getZoom();
     if (!enabled || zoom < TERRAIN.offZoom) { setMode(false); return; }
     if (zoom < TERRAIN.minZoom && !mode) return;
-    // A building or office being looked at: its site decides (a fixed reading, no hysteresis) — the bounds of a camera
+    // A building or item being looked at: its site decides (a fixed reading, no hysteresis) — the bounds of a camera
     // pitched at 75° reach kilometres past the site, where SRTM reads a city's towers as relief.
     const at = typeof site === 'function' ? site() : null;
     const near = Array.isArray(at) && at.every(Number.isFinite) ? await siteRelief(at[0], at[1]).catch(() => null) : null;

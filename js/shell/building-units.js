@@ -2,9 +2,9 @@
  * Which buildings the map draws in each area (owner 2026-11-01, point 3: “ใช้เกณฑ์ 15% … ได้”, “กรุงเทพฯ ใช้เขต
  * เป็นหน่วย … ได้”).
  *
- * data/building-units/index.json (meta, rule, per-province summary) and data/building-units/{PROV}.json (built by
- * montri-th/hotel scripts/build-building-units.py, copied by scripts/adapt-building-units.py): one record per อปท. that
- * the CityMETER · Hotel build evaluated (every อปท. holding a hotel with a point) — in Bangkok one per เขต —
+ * data/building-units/index.json (meta, rule, per-province summary) and data/building-units/{PROV}.json
+ * (written by the demo's scripts/build-building-units.py or scripts/adapt-building-units.py): one record per อปท.
+ * the build lists — in Bangkok one per เขต —
  * with its source: CityMETER Building V4 where its building count is at least 1.15 × the OpenStreetMap count of the
  * same unit, otherwise OpenStreetMap. Only a CityMETER unit carries an outline and the production tile units it is
  * read by (the อปท. itself; in Bangkok its แขวง). Everywhere else the map draws OpenStreetMap, as before.
@@ -15,6 +15,8 @@
  * dataset's model estimates (`height_m`): context, never a claim.
  *
  * A file that fails to load counts as settled: the area stays on OpenStreetMap (never an empty map).
+ *
+ * Part of the shared CityMETER demo shell: edit it in every repository at once (js/shell/manifest.json).
  */
 export const UNITS_BASE = 'data/building-units/';
 /** Production building tiles (CORS allows the demo's origin; the browser caches them per the API's headers). */
