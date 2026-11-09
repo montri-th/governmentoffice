@@ -15,7 +15,12 @@
  *
  * Pure: builds labels and https URLs from public names only (no user data, no internal ids). The Google names on the
  * buttons say where the answers come from (owner 2026-11-01: no caveat lines).
+ * An English page (citymeter-shell 0.5.x) asks Google AI in English, with the English area and station names the data
+ * gives (js/lang.js); an office keeps its Thai name (the dataset has no English one), and Google Maps keeps the Thai
+ * place name measured above, which is what finds the office. The button labels are translated by js/shell/i18n.js.
  */
+import {LANG, englishName, translate} from './shell/i18n.js';
+
 const enc = encodeURIComponent;
 export const googleAskURL = q => `https://www.google.com/search?q=${enc(q)}`;
 export const mapsSearchURL = q => `https://www.google.com/maps/search/?api=1&query=${enc(q)}`;
@@ -82,10 +87,11 @@ export function mapsPlaceName(row) {
  *       province?, point?: {lat, lon, role}, rows?}
  * → [{id, label, href, note}] in display order (only the actions that apply).
  */
-export function contextActions(ctx = {}) {
+export function contextActions(ctx = {}, lang = LANG) {
   const out = [], place = ctx.area ? join(ctx.area.place, ctx.area.province) : '';
   const add = (id, label, href, note = '') => { if (href) out.push({id, label, href, note}); };
-  if (ctx.kind === 'office' && ctx.row) {
+  if (lang === 'en') englishQuestions(ctx, add);
+  else if (ctx.kind === 'office' && ctx.row) {
     const r = ctx.row, name = clean(r.name);
     const what = r.office ? 'เปิดทำการวันและเวลาไหน ติดต่อและให้บริการเรื่องอะไรบ้าง ย้ายที่ตั้งหรือมีจุดบริการใหม่ไหม และเดินทางไปอย่างไร'
       : 'คืออะไร อยู่ตรงไหน และเดินทางไปอย่างไร';
@@ -113,6 +119,35 @@ export function contextActions(ctx = {}) {
       Number.isFinite(p.heading) ? 'หันหน้าเข้าหาอาคารที่กำลังดูบนแผนที่' : '');
   }
   return out;
+}
+
+/** The Google AI questions of an English page (the Maps searches stay the Thai ones that find the place). */
+function englishQuestions(ctx, add) {
+  // N: a name (the data's English, else as given); T: a word of the dictionary (a type, a line), else as given.
+  const N = s => englishName(clean(s)), T = s => translate(clean(s)) ?? clean(s);
+  const where = ctx.area ? [N(ctx.area.place), N(ctx.area.province)].filter(Boolean).join(', ') : '';
+  if (ctx.kind === 'office' && ctx.row) {
+    const r = ctx.row, name = clean(r.name);
+    const what = r.office ? 'what are its opening days and hours, how do I contact it, which services does it offer, has it moved or opened a new service point, and how do I get there?'
+      : 'what is it, where is it, and how do I get there?';
+    add('ai', 'ถาม Google AI', googleAskURL(`${name}${where ? ` (${where})` : ''}: ${what}`));
+    add('maps', 'Google Maps', mapsSearchURL(join(mapsPlaceName(r) || name, ctx.area?.place, ctx.area?.province)));
+  } else if (ctx.kind === 'building') {
+    const names = [...new Set((ctx.rows || []).map(r => clean(r.name)).filter(Boolean))].slice(0, 2);
+    add('ai', 'ถาม Google AI', googleAskURL(`Are ${names.join(' and ')}${where ? ` (${where})` : ''} in the same building or compound, and which other offices are around them?`));
+  } else if (ctx.kind === 'area' && ctx.area) {
+    add('ai', 'ถาม Google AI', googleAskURL(`Government offices in ${where}: where are the district office, the district or municipal office, police stations, fire stations and courts, and which have moved or opened recently?`));
+    add('maps', 'Google Maps', mapsSearchURL(`สถานที่ราชการ ${join(ctx.area.place, ctx.area.province)}`));
+  } else if (ctx.kind === 'station' && ctx.station) {
+    const s = ctx.station, line = (s.lines || []).map(T).join(', ');
+    add('ai', 'ถาม Google AI', googleAskURL(`Government offices near ${N(s.name)} station${line ? ` (${line})` : ''}: where are they, how many minutes' walk, and what services do they offer?`));
+    add('maps', 'Google Maps', mapsSearchURL(`สถานที่ราชการใกล้สถานี${clean(s.name)}`));
+  } else if (ctx.kind === 'type' && ctx.type) {
+    add('ai', 'ถาม Google AI', googleAskURL(`${T(ctx.type.th)} in Thailand: how many are there, what services do they offer, and which have moved or opened recently?`));
+  } else if (ctx.kind === 'overview') {
+    const place = N(ctx.province) || 'Thailand';
+    add('ai', 'ถาม Google AI', googleAskURL(`Government offices in ${place}: which offices have recently moved, opened a new building or opened a new service point?`));
+  }
 }
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));

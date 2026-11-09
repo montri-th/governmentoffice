@@ -53,6 +53,8 @@
  * grammar d · at · e · m · f.* · focus · view · v3d by citymeter-shell (js/shell/url.js), with a browser history
  * entry per level (the back button goes up a level).
  */
+import {registerDataNames, registerRowNames} from './lang.js';
+import {LANG as PAGE_LANG, translate as translateText} from './shell/i18n.js';
 import {provinces as provinceList, provinceByCode, provinceCodeFrom, setProvinces, decodeDataset, decodeSites, attachSites, appendGroupRows, rankRows, groupsOfScope, filterRows, summarize, hasPoint, unitFor, rowValue, pinRadius, typeParam, typeIdOf, scopeValue, SCOPE_ALL, SCOPE_OFFICES} from './model.js';
 import {buildAreaIndex, areaWord, areaLocator, recordBounds} from './areas.js';
 import {summarizeAreaInsight, filterAreaRows} from './area-insight.js';
@@ -1055,6 +1057,7 @@ function ensureGroups(value, {onFile = null} = {}) {
         const n = appendGroupRows(state.data, json, state.index, {rank: false});
         if (n !== g.rows) console.warn('Group rows differ from the dataset count', g.id, n, g.rows);
         for (let i = before; i < state.data.rows.length; i++) state.rowById.set(state.data.rows[i].id, state.data.rows[i]);
+        registerRowNames(state.data.rows, before);
         attachSites(state.data.rows, state.sites, before);
         provinceScopeRows.key = '';
       }).finally(() => state.loading.delete(g.id));
@@ -2129,6 +2132,7 @@ async function init() {
     state.index = buildAreaIndex(indexJSON);
     state.provincesGeo = validFeatureCollection(provincesJSON) ? provincesJSON : {type: 'FeatureCollection', features: []};
     state.data = decodeDataset(rowsJSON, state.index);
+    registerDataNames({index: state.index, data: state.data});
     state.sites = decodeSites(sitesJSON);
     attachSites(state.data.rows, state.sites);
     state.stationById = new Map(state.data.stations.map(s => [s.id, s]));
@@ -2147,8 +2151,10 @@ async function init() {
     // Every production point before the first paint (the default scope is every group): the launch card counts the
     // files in. A group file that cannot load stops the start with a retry (never a first screen over part of the data).
     const total = state.data.groups.reduce((n, g) => n + g.rows, 0);
+    // The launch card shows this line as it is (it is outside the translated page): an English page sends English.
+    const progressLine = th => (PAGE_LANG === 'en' ? translateText(th) ?? th : th);
     const progress = (done, files) => window.dispatchEvent(new CustomEvent('citymeter:progress', {detail: {
-      message: `กำลังโหลดหน่วยงานและสถานที่ ${num(total)} แห่ง${files ? ` · ${num(done)} จาก ${num(files)} หมวด` : ''}`}}));
+      message: progressLine(`กำลังโหลดหน่วยงานและสถานที่ ${num(total)} แห่ง${files ? ` · ${num(done)} จาก ${num(files)} หมวด` : ''}`)}}));
     const pending = ensureGroups(SCOPE_ALL, {onFile: progress});
     if (pending) { progress(0, state.data.groups.filter(g => !g.loaded && g.file).length); await pending; }
     commitGroup(fromURL.group);
