@@ -16,6 +16,7 @@
  * distance pictogram; “ระยะตรง” in titles). An office's pin inside a drawn building is “หน่วยงานในอาคารนี้” /
  * “อีก N แห่งในอาคารนี้”, never “ตั้งอยู่ใน”. Sources, methods and ids sit in one closed <details>.
  */
+import {LANG} from './shell/i18n.js';
 import {productionLink, provinceByCode, hasPoint, stationLink, typeParam, SCHOOL_SITE} from './model.js';
 import {areaWord} from './areas.js';
 import {cueMarkup} from './cues.js';
@@ -379,7 +380,7 @@ export function renderArea(p, classOf, ctx = {}) {
   const head = `<section class="detail-head">
       <button type="button" class="btn quiet back" data-action="back">กลับ</button>
       <p class="eyebrow">${esc(w.area)} · <button type="button" class="link-button" data-action="select-province" data-id="${esc(a.province)}">${esc(prov)}</button></p>
-      <h2>${esc(place)}</h2>${a.nameEn ? `<p class="subtle">${esc(a.nameEn)}</p>` : ''}
+      <h2>${esc(place)}</h2>${a.nameEn ? (LANG === 'en' ? `<p class="subtle" lang="th" translate="no">${esc(place)}</p>` : `<p class="subtle">${esc(a.nameEn)}</p>`) : ''}
       ${rank}
       <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${staffTileOf(p, unit)}${metricTile(share, `ของ${prov}`, 'province', shareDetail)}${metricTile(railShare, 'ใกล้รถไฟฟ้า', 'rail', p.rail?.base ? railDetail(p.rail, unit) : '')}</div>
       ${selectionNote(p, place, ctx)}
@@ -421,7 +422,7 @@ export function renderStation(p, ctx = {}) {
       <button type="button" class="btn quiet back" data-action="back">กลับ</button>
       <div class="identity">${pic('rail', 'identity-pic')}<div>
         <p class="eyebrow">สถานีรถไฟฟ้า${s.lines?.length ? ` · ${esc(s.lines.join(' · '))}` : ''}${building ? ` · ${pic('construction')}กำลังสร้าง` : ''}</p>
-        <h2>สถานี${esc(s.name)}</h2>${s.nameEn ? `<p class="subtle">${esc(s.nameEn)}</p>` : ''}</div></div>
+        <h2>สถานี${esc(s.name)}</h2>${s.nameEn ? (LANG === 'en' ? `<p class="subtle" lang="th" translate="no">สถานี${esc(s.name)}</p>` : `<p class="subtle">${esc(s.nameEn)}</p>`) : ''}</div></div>
       <div class="metrics compact">${metricTile(p.count, 'แห่ง', 'office')}${staffTileOf(p, unit)}${metricTile(p.radius, 'ม. รอบสถานี', 'distance', `ระยะตรงจากจุดอ้างอิงของสถานี ${meters(p.radius)}`)}</div>
       ${actionBar({kind: 'station', station: s, point: {lat: s.lat, lon: s.lon, role: 'station'}})}
       <div class="detail-actions">${link(stationLink(s), 'ดูใน CityMETER Transit', 'btn quiet source-link')}</div>

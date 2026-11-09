@@ -14,6 +14,7 @@
  * Full sentences live in the accessible names and chip titles only; the provenance line stays in the panel. No logos.
  */
 import {cueMarkup} from './cues.js';
+import {LANG} from './shell/i18n.js';
 import {terrainFacts, terrainChips} from './shell/terrain.js';
 
 export const LABEL_MIN_ZOOM = 12.5;
@@ -125,7 +126,7 @@ export function installOfficeLabels(map, container, {onSelect, bounds, avoid = (
     const staff = known(row) ? `บุคลากร ${num(row.staff)} คน` : '';
     el.setAttribute('aria-label', [row.name, row.type?.th, staff].filter(Boolean).join(' · '));
     const parts = labelParts(row);
-    el.innerHTML = `<span class="hl-cue" aria-hidden="true">${cueMarkup(row.series)}</span><span class="hl-text"><span class="hl-name">${esc(parts.site)}</span></span>${parts.staff ? `<span class="hl-staff data-number"><i class="pictogram pic-staff" aria-hidden="true"></i>${esc(num(parts.staff))}</span>` : ''}`;
+    el.innerHTML = `<span class="hl-cue" aria-hidden="true">${cueMarkup(row.series)}</span><span class="hl-text"><span class="hl-name"${LANG === 'en' ? ` translate="no"${/[\u0E01-\u0E3A\u0E40-\u0E4E]/.test(parts.site) ? ' lang="th"' : ''}` : ''}>${esc(parts.site)}</span></span>${parts.staff ? `<span class="hl-staff data-number"><i class="pictogram pic-staff" aria-hidden="true"></i>${esc(num(parts.staff))}</span>` : ''}`;
     el.onclick = () => onSelect?.(row);
     el.onmouseenter = () => { if (finePointer()) showCard(row, el); };
     el.onmouseleave = () => hideCard(row);
