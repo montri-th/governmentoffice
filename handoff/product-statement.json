@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.7.0",
+ "productVersion": "0.7.1",
  "updatedOn": "2026-11-06",
  "documentType": "product-statement",
  "dataset_id": "research.TH.government_office",
