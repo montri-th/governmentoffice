@@ -2,7 +2,7 @@
  "$schema": "./handoff.schema.json",
  "schemaVersion": "1.5.0",
  "productId": "citymeter-governmentoffice",
- "productVersion": "0.7.1",
+ "productVersion": "0.8.0",
  "updatedOn": "2026-11-06",
  "documentType": "product-brief",
  "datasetCheckedOn": "2026-11-06",
@@ -745,6 +745,6 @@
   "site": "GitHub Pages from main /root",
   "handoff": "dist/CityMETER-GovernmentOffice-Developer-Handoff.zip (START_HERE.md, RELEASE_RECEIPT.json, evidence/, source/)",
   "liveCheck": "npm run verify:live",
-  "cacheTag": "?v=20261109-r8 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
+  "cacheTag": "?v=20261111-r1 on every entry file and, through the import map in index.html, on every ES module; the frame files take the same tag from import.meta.url; the group files take the first 8 hex of their SHA-256; bump it with package.json version (tests/release.test.js); icon fonts inside the stylesheets carry ?v=<first 8 hex of their SHA-256> (tests/icons.test.js)"
  }
 }

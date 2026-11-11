@@ -1,6 +1,6 @@
 {
  "artifact": "CityMETER Government Office — 3D-first, district-first map of every point of the production Government Officer dataset across Thailand (440,005: government offices and the places of the same dataset), with production's groups and types, the personnel production records at the offices, the nearest public services round a site, recent moves and openings and rail context from the same registry",
- "productVersion": "0.7.1",
+ "productVersion": "0.8.0",
  "updatedOn": "2026-11-06",
  "ldsVersion": "0.9.7",
  "release": "v0.9.7-owner.1",
