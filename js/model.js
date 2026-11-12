@@ -20,6 +20,7 @@
  * Area = the เขต/อำเภอ (DISTRICT) of CityMETER production that holds the point's production overlay subdistrict.
  */
 import {seriesOf} from './cues.js';
+import {needle, has} from './shell/fuzzy.js';
 
 /** Short labels for tight places (matrix columns); the full Thai label stays in titles, legends and lists. */
 export const GROUP_SHORT = Object.freeze({
@@ -165,8 +166,12 @@ const areaText = (code, a) => {
 };
 const typeText = (type, group) => type ? (type.text ??= lower([type.th, type.short, group?.th].filter(Boolean).join(' '))) : lower(group?.th);
 const ownText = r => (r.haystack ??= lower([r.name, r.agency, r.ministry].filter(Boolean).join(' ')));
-/** Every word of a search (lower case, split on spaces) is somewhere in the row's names, agency, district or type. */
-export const matchesSearch = (r, terms) => terms.every(t => ownText(r).includes(t) || (r.areaText || '').includes(t) || r.typeText.includes(t));
+/**
+ * Every word of a search — needle()s of the words, in lower case — is somewhere in the row's names, agency, district
+ * or type. A needle answers as `includes` does and is not slowed by the word's first letter: among 440,005 rows a
+ * word that begins with ก to ฎ (“กรุงเทพ”, “ชลบุรี”) took thirteen times as long as another (js/shell/fuzzy.js#needle).
+ */
+export const matchesSearch = (r, terms) => terms.every(t => has(ownText(r), t) || has(r.areaText || '', t) || has(r.typeText, t));
 
 /**
  * The dictionaries of data/offices.json (groups, categories, types, stations, events, urls, districts, provinces):
@@ -300,7 +305,7 @@ export function groupsOfScope(groups, value = '') {
  */
 export function filterRows(rows, f = {}) {
   // Every word of the search, anywhere in the office's names, agency, area or type (the Hotel 0.3.4 rule).
-  const terms = lower(f.search).trim().split(/\s+/).filter(Boolean);
+  const terms = lower(f.search).trim().split(/\s+/).filter(Boolean).map(needle);
   const group = f.group === 'all' ? '' : f.group || '';
   const type = f.type !== undefined && f.type !== '' ? typeIdOf(f.type) : null;
   return rows.filter(r => {

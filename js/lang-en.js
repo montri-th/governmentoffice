@@ -368,6 +368,7 @@ export default {
     // Filters
     'ค้นหาหน่วยงาน ประเภท ต้นสังกัด หรือพื้นที่': 'Search offices, types, parent agencies or areas',
     'ค้นหาหน่วยงาน ประเภท หรือพื้นที่': 'Search offices, types or areas',
+    'ลองชื่อหน่วยงาน ประเภท หมวด สถานี เขต/อำเภอ หรือจังหวัด': 'Try the name of an office, a type, a category, a station, a district or a province',
     'ค้นหาชื่อหน่วยงาน ต้นสังกัด เขต/อำเภอ หรือจังหวัด': 'Search office names, parent agencies, districts or provinces',
     'ตัวกรอง': 'Filters',
     'ตัวกรองที่ใช้อยู่': 'Active filters',
@@ -514,6 +515,8 @@ export default {
   },
   // Words whose English depends on where they stand (a tile label under its number).
   contexts: [
+    // The line under a name in the search list (js/find.js#searchNote): one entry, so the singular.
+    ['.find-where', {'สถานีรถไฟฟ้า': 'Rail station', 'หมวด': 'Category', 'ประเภท': 'Type', 'จังหวัด': 'Province'}],
     ['.metric > span:not([class])', {
       'แห่ง': count('place', 'places'),
       'แห่ง ในโฟกัส': count('place in focus', 'places in focus'),
@@ -571,6 +574,8 @@ export default {
     [re(`หมุดของหน่วยงานอีก ${N} แห่งอยู่ในอาคารนี้บนแผนที่`), (m) => (m[1] === '1' ? 'The pin of 1 more office is in this building on the map' : `Pins of ${m[1]} more offices are in this building on the map`)],
     [re(`ดูทั้งหมด ${N} แห่ง`), (m) => `See all ${m[1]}`],
     [re(`พบ ${N} แห่ง`), (m, t) => `Found ${places(t, m[1])}`],
+    // The other categories of the dataset (shown once a category is chosen): the hint beside the heading
+    [re(`ทั้งชุด ${N} แห่ง`), (m, t) => `Whole dataset: ${places(t, m[1])}`],
     [re(`(?:หน่วยงาน|หน่วยงานและสถานที่|สถานที่)ในจอ ${N} แห่ง`), (m, t) => `${places(t, m[1])} on screen`],
     [re(`นอกโฟกัส ${N} แห่ง`), (m) => `${m[1]} outside the focus`],
     [re(`${N} จังหวัด`), (m, t) => `${m[1]} ${t.plural(m[1], 'province', 'provinces')}`],
@@ -665,5 +670,7 @@ export default {
     [re(`ไม่ระบุจังหวัด ${N} แห่ง`), (m) => `Province not stated: ${m[1]}`],
     // Dates (moves and openings)
     [/^(\d{1,2} )?(ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.) (\d{4})$/, (m, t) => t.date(m[0])],
+    // A category chip's title, “ตำรวจ 6,548 แห่ง”: last, so every pattern above that ends the same way is read first
+    [re(`(.+) ${N} แห่ง`), (m, t) => { const x = SPLIT.test(m[1]) || /^[\d,]+ /.test(m[1]) ? null : t.part(m[1]); return x == null ? null : `${x}: ${places(t, m[2])}`; }],
   ],
 };
