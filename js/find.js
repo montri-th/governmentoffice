@@ -49,7 +49,14 @@ export function* searchRows({data, index}, from = 0) {
 }
 
 /** Every entry, the few places and filters first, then the offices that are loaded. */
-export function* searchEntries({data, index}) {
+/**
+ * The English an English page shows for a word of the page's own vocabulary (js/lang-en.js through `en`, which is
+ * js/shell/i18n.js#translate there and nothing on a Thai page): the list finds the entry by it and heads its row with
+ * it. The data keeps these words in Thai only.
+ */
+const englishOf = (en, th) => { const x = en ? en(th) : null; return typeof x === 'string' && x && x !== th && !/\p{Script=Thai}/u.test(x) ? x : undefined; };
+
+export function* searchEntries({data, index, en = null}) {
   const byCode = new Map(provinces().map(p => [p.code, p]));
   for (const p of provinces()) yield {id: p.code, kind: 'province', name: p.th, nameEn: p.en, aka: PROVINCE_AKA[p.th], codes: [p.code, p.dopa], province: p.code};
   for (const a of index.byId.values()) {
@@ -59,7 +66,7 @@ export function* searchEntries({data, index}) {
   for (const s of data.stations) yield {id: s.id, kind: 'station', name: s.name, nameEn: s.nameEn, station: s};
   for (const g of data.groups) yield {id: g.id, kind: 'group', name: g.th, nameEn: g.en, aka: [g.short]};
   // A type goes by its short name too (อบต., ทต.); the points without a type are no entry.
-  for (const t of data.types) if (t.id !== '') yield {id: t.id, kind: 'type', name: t.th, aka: [t.short], type: t};
+  for (const t of data.types) if (t.id !== '') yield {id: t.id, kind: 'type', name: t.th, nameEn: englishOf(en, t.th), aka: [t.short], type: t};
   yield* searchRows({data, index});
 }
 

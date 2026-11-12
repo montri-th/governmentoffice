@@ -2227,7 +2227,8 @@ function installFinder() {
     state.finder = installSearch({
       input: $('search'),
       index: state.findIndex,
-      entries: function* () { yield* searchEntries({data: state.data, index: state.index}); state.findRows = state.data.rows.length; },
+      // On an English page the words of the page's own vocabulary (ประเภท) are found by their English too.
+      entries: function* () { yield* searchEntries({data: state.data, index: state.index, en: PAGE_LANG === 'en' ? translateText : null}); state.findRows = state.data.rows.length; },
       note: entry => searchNote(entry, {data: state.data, index: state.index}),
       // What the reader is looking at comes first among equal names.
       scope: () => ({province: $('province').value || areaById(state.selectedArea)?.province || '', area: state.selectedArea || ''}),
