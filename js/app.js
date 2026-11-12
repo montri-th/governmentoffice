@@ -82,6 +82,9 @@ import {installOfficeLabels} from './labels.js';
 import {installTerrain, terrainFacts, terrainChips, TERRAIN} from './shell/terrain.js';
 import {createCodec, createNavigator} from './shell/url.js';
 import {pageTitle} from './shell/title.js';
+import {createIndex} from './shell/fuzzy.js';
+import {installSearch} from './shell/search.js';
+import {SEARCH_KINDS, SEARCH_HEADS, SEARCH_HINT, searchEntries, searchRows, searchNote} from './find.js';
 
 const $ = id => document.getElementById(id);
 const FIELDS = ['search', 'group', 'type', 'province'];
@@ -266,6 +269,7 @@ function update({fit = false} = {}) {
   drawChart();
   syncList();
   saveURL();
+  state.finder?.sync();
   announce(`พบ ${num(s.count)} แห่ง${s.staff ? ` บุคลากรที่บันทึก ${num(s.staff)} คน` : ''}`);
 }
 
@@ -1061,6 +1065,7 @@ function ensureGroups(value, {onFile = null} = {}) {
         for (let i = before; i < state.data.rows.length; i++) state.rowById.set(state.data.rows[i].id, state.data.rows[i]);
         registerRowNames(state.data.rows, before);
         attachSites(state.data.rows, state.sites, before);
+        indexMoreRows();
         provinceScopeRows.key = '';
       }).finally(() => state.loading.delete(g.id));
       state.loading.set(g.id, job);
@@ -2185,6 +2190,62 @@ function restoreFromHistory() {
   update({fit: true});
 }
 
+/**
+ * The search box (0.9.0; owner 2026-11-12 12:05, VERBATIM: “ศึกษาแนวคิดเรื่อง Fuzzy search แล้ว implement กับ demo web
+ * ให้ได้ user benefit สูงสุดตาม user intent ในขณะนั้น และตาม product statement”). A name typed is listed with what it is
+ * and where (js/shell/search.js, names from js/find.js) and opens the level that answers the product statement's
+ * question for it: a province or a เขต/อำเภอ its offices and personnel, a group (หมวด) its scope, a type its filter, an
+ * office its profile, a station the offices round it. The map and the panel no longer change while the reader is
+ * still typing.
+ */
+function openFound(entry) {
+  // A filter chosen by name is shown for the whole page: the place being looked at is left and the filters that
+  // would leave it no row are lifted first (js/shell/search.js#makeWay).
+  const way = (field, id) => state.finder.makeWay(field, id);
+  // An item chosen by name always opens: the words and the filters it does not pass are lifted first.
+  const clear = rows => { if (state.finder.makeWayFor(v => filterRows(rows, v).length).length) update(); };
+  if (entry.kind === 'province') selectProvince(entry.id);
+  else if (entry.kind === 'area') selectArea(entry.id);
+  else if (entry.kind === 'station') selectStation(entry.id);
+  else if (entry.kind === 'group') { way('group', entry.id); setGroup(entry.id); }
+  else if (entry.kind === 'type') { way('type', typeParam(entry.id)); filterType(typeParam(entry.id)); }
+  else if (entry.kind === 'office') { clear([entry.row]); selectOffice(entry.id); }
+}
+/**
+ * The rows of a group that loaded after the names were read join the list (ensureGroups). While the first reading
+ * runs it takes the rows that arrive itself; findRows is where it stopped. A phone keeps to the rows of the first
+ * reading: the three large groups are some 420,000 names, and the words still filter every loaded row.
+ */
+function indexMoreRows() {
+  if (state.findRows == null || !state.findIndex || state.budget.level !== 'full') return;
+  state.findIndex.addAll(searchRows({data: state.data, index: state.index}, state.findRows));
+  state.findRows = state.data.rows.length;
+}
+function installFinder() {
+  try {
+    state.findIndex = createIndex({kinds: SEARCH_KINDS, heads: SEARCH_HEADS});
+    state.finder = installSearch({
+      input: $('search'),
+      index: state.findIndex,
+      entries: function* () { yield* searchEntries({data: state.data, index: state.index}); state.findRows = state.data.rows.length; },
+      note: entry => searchNote(entry, {data: state.data, index: state.index}),
+      // What the reader is looking at comes first among equal names.
+      scope: () => ({province: $('province').value || areaById(state.selectedArea)?.province || '', area: state.selectedArea || ''}),
+      rows: text => filterRows(state.data.rows, {...values(), search: text}).length,
+      unit: 'แห่ง',
+      hint: SEARCH_HINT,
+      // The sheet stood tall for the typing: once a name is chosen it goes back to its resting height, so the map
+      // shows what was chosen (an item or an area has set its own height by then).
+      pick: entry => { openFound(entry); if (sheetOpen() && $('panel').dataset.sheet === 'full') setSheet(restSheet()); },
+      // A filter or words chosen from the list: the district or station being looked at is left; the filters that may be
+      // lifted for it are these — never the province (a province without it is a reading of that province).
+      filters: {fields: ['type'], values, count: v => filterRows(state.data.rows, v).length, leave: () => { state.selectedArea = ''; state.panel = overviewPanel(); }},
+      // On a phone the open sheet stands tall while a name is typed, so the list has room above the keyboard.
+      onFocus: () => { if (sheetOpen()) setSheet('full'); },
+    });
+  } catch (e) { state.finder = null; console.warn('Search list unavailable', e); }
+}
+
 function wireEvents() {
   let timer;
   // The หมวด filter may have to load its rows first (setGroup commits it once they are in).
@@ -2197,7 +2258,11 @@ function wireEvents() {
       if (f === 'province') state.selectedArea = '';
       state.panel = state.selectedArea ? {mode: 'area', id: state.selectedArea} : overviewPanel();
       update({fit: true});
-    }, f === 'search' ? 450 : 0);
+      // Words applied from the search box on a phone: the sheet goes back to its resting height and the map shows
+      // them — unless the reader is still in the box (it was emptied, which lifts the words).
+      if (f === 'search' && document.activeElement !== state.finder?.box) setSheet(restSheet());
+      // With the list, the words arrive whole (Enter or the list's last row); without it the box filters as it is typed in.
+    }, f === 'search' && !state.finder ? 450 : 0);
   });
   $('filters').addEventListener('reset', () => setTimeout(() => { commitGroup(''); resetToOverview(); }, 0));
   // Measure switch (radio group): click, or arrow keys between the two options.
@@ -2320,6 +2385,7 @@ async function init() {
     try { $('theme').value = localStorage.getItem(THEME_KEY) || 'auto'; } catch {}
     applyTheme();
     wireEvents();
+    installFinder();
     update();
     if (state.panel.mode !== 'overview') openMobilePanel();
     window.dispatchEvent(new CustomEvent('citymeter:ready'));
@@ -2331,6 +2397,6 @@ async function init() {
 }
 
 // Developer hook for live tuning in a browser console (not an API; may change without notice).
-window.__citymeter = {state, get map() { return state.map; }, update, fitMap, updateSpatialLayers, applyPreset: (name, opts) => state.map && applyPreset(state.map, name, opts), fitPitched: (b, opts) => state.map && fitPitched(state.map, b, opts), cameraPadding, visibleBox, focusTarget: () => focusTarget(), focusShape: () => focusShape(), frameFocus, selectOffice, selectStation, selectBuilding, buildingRows, setMetric, setGroup, filterType, buildMapStyle};
+window.__citymeter = {state, get map() { return state.map; }, get finder() { return state.finder; }, update, fitMap, updateSpatialLayers, applyPreset: (name, opts) => state.map && applyPreset(state.map, name, opts), fitPitched: (b, opts) => state.map && fitPitched(state.map, b, opts), cameraPadding, visibleBox, focusTarget: () => focusTarget(), focusShape: () => focusShape(), frameFocus, selectOffice, selectStation, selectBuilding, buildingRows, setMetric, setGroup, filterType, buildMapStyle};
 
 init();
