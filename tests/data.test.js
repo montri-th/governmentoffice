@@ -168,6 +168,22 @@ test('recent moves and openings (06): dated, kinds of the tab, public https anno
   assert.equal(data.rows.reduce((n, r) => n + r.events.length, 0), linked.length);
 });
 
+test('the text filter keeps the rows that hold every word, whatever letter a word begins with', () => {
+  // The rule in plain `includes`: every word in the row's own names and agency, its district and province, or its type.
+  const {data} = load();
+  const lower = v => String(v || '').toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const own = r => lower([r.name, r.agency, r.ministry].filter(Boolean).join(' '));
+  const keeps = text => { const terms = lower(text).trim().split(/\s+/).filter(Boolean); return data.rows.filter(r => terms.every(t => own(r).includes(t) || (r.areaText || '').includes(t) || r.typeText.includes(t))); };
+  // Words that begin with ก to ฎ go the needle's way (js/shell/fuzzy.js#needle); the others are looked for as they are.
+  for (const text of ['กรุงเทพ', 'ชลบุรี', 'ขอนแก่น', 'กรม', 'จังหวัด', 'งาน', 'คลอง', 'กก', 'ภูเก็ต', 'เชียงใหม่', 'สถานีตำรวจ ชลบุรี', 'กรม ตำรวจ', 'ศาล จังหวัด', 'Police', 'zzzz']) {
+    const want = keeps(text), got = filterRows(data.rows, {search: text});
+    assert.equal(got.length, want.length, text);
+    assert.ok(got.every((r, i) => r === want[i]), `${text}: the same rows in the same order`);
+  }
+  assert.ok(filterRows(data.rows, {search: 'กรุงเทพ'}).length > 0 && filterRows(data.rows, {search: 'ชลบุรี'}).length > 0 && filterRows(data.rows, {search: 'กรม ตำรวจ'}).length > 0);
+  assert.equal(filterRows(data.rows, {search: '  '}).length, data.rows.length, 'no word keeps every row');
+});
+
 test('publication hygiene: no contact field, full production id, researcher note or private link; links are https', () => {
   const {raw} = load();
   for (const f of ['phone', 'website', 'address', 'email_address', 'gov_office_id']) assert.ok(raw.meta.excludedFields.includes(f), f);
